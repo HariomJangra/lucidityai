@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700&display=swap');
+
+:root {
+  --page-bg: #faf8f5;
+  --surface: #fdfbfa;
+  --surface-strong: #ebeae4;
+  --surface-muted: #f9f9f6;
+  --surface-hover: #f1f0ea;
+  --text-primary: #191a1c;
+  --text-muted: #4e5053;
+  --text-subtle: #797a7d;
+  --text-inverse: #ffffff;
+  --border: #e3ded7;
+  --border-strong: #d1cdc6;
+  --accent-teal: #1a7f7c;
+  --accent-teal-hover: #146361;
+  --accent-teal-light: #e6f3f3;
+  --shadow-soft: 0 4px 12px rgba(25, 26, 28, 0.04);
+  --shadow-card: 0 10px 30px rgba(25, 26, 28, 0.06);
+  --font-body: 'Inter', sans-serif;
+  --font-display: 'Sora', sans-serif;
+
+  font: 14px/1.5 var(--font-body);
+  color: var(--text-primary);
+  background: var(--page-bg);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--page-bg);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+textarea {
+  resize: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+}
