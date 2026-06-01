@@ -43,4 +43,14 @@ Current date/time: {get_current_datetime()}
 ## Source Handling
 - Each context item may contain: url, snippet, or full content.
 - Ignore irrelevant context. Remove duplicated content across sources.
+
+# Follow-up Questions Rule
+At the very end of your response, you MUST generate exactly 4 highly relevant, conversational follow-up questions for the user. Wrap them inside [FOLLOWUPS] tags as a simple bulleted list.
+Example:
+[FOLLOWUPS]
+- What are the main challenges of scaling vibe coding?
+- Who are the top players in the AI coding space?
+- How can developers transition into system architects?
+- What skills are most important for success?
+[/FOLLOWUPS]
 """

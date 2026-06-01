@@ -8,7 +8,7 @@ import { getHighlighter } from 'shiki'
 import type { Components } from 'react-markdown'
 import {
   Compass,
-  Monitor,
+  // Monitor,
   Plus,
   Search,
   ChevronDown,
@@ -26,9 +26,9 @@ import {
   X,
   ArrowRight,
   PenTool,
-  Video,
-  MessageSquare,
-  Bookmark,
+  // Video,
+  // MessageSquare,
+  // Bookmark,
   Check,
   Globe,
   Image as ImageIcon,
@@ -121,25 +121,25 @@ const RedditLogo = () => (
   </svg>
 )
 
-const SearchGlobeIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    width="16"
-    height="16"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20" />
-    <path d="M19 19a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" fill="var(--page-bg)" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M21 21l-1.5-1.5" />
-  </svg>
-)
+// const SearchGlobeIcon = ({ className }: { className?: string }) => (
+//   <svg
+//     className={className}
+//     viewBox="0 0 24 24"
+//     fill="none"
+//     stroke="currentColor"
+//     strokeWidth="1.8"
+//     strokeLinecap="round"
+//     strokeLinejoin="round"
+//     width="16"
+//     height="16"
+//     xmlns="http://www.w3.org/2000/svg"
+//   >
+//     <circle cx="12" cy="12" r="10" />
+//     <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20" />
+//     <path d="M19 19a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" fill="var(--page-bg)" stroke="currentColor" strokeWidth="1.5" />
+//     <path d="M21 21l-1.5-1.5" />
+//   </svg>
+// )
 
 const IBMLogo = () => (
   <div className="source-icon-ibm" style={{
@@ -311,6 +311,7 @@ interface StepItem {
     logo: string
     snippet?: string
   }>
+  active?: boolean
 }
 
 interface ResultData {
@@ -326,13 +327,14 @@ interface ResultData {
 interface ChatTurn {
   id: string
   query: string
-  status: 'searching' | 'analyzing' | 'thinking' | 'typing' | 'completed'
+  status: 'thinking' | 'typing' | 'completed'
   resultData: ResultData | null
   streamedAnswer: string
   thinkingProcess?: string
   preToolThinking?: string
   postToolThinking?: string
   thinkingExpanded?: boolean
+  postThinkingExpanded?: boolean
   visibleLinksCount: number
   stepsExpanded: boolean
   toolsUsed?: boolean
@@ -352,6 +354,214 @@ const getSharedHighlighter = () => {
     })
   }
   return shikiHighlighterPromise
+}
+
+const getToolConfig = (stepTitle: string) => {
+  const lower = stepTitle.toLowerCase()
+  if (lower.includes('search') || lower.includes('web') || lower.includes('globe') || lower.includes('searxng') || lower.includes('google')) {
+    return { name: 'Searching the web', icon: Globe, color: 'var(--accent-teal)' }
+  } else if (lower.includes('calc') || lower.includes('math') || lower.includes('expression')) {
+    return { name: 'Calculator', icon: Calculator, color: '#3b82f6' }
+  } else if (lower.includes('fetch') || lower.includes('url') || lower.includes('link') || lower.includes('page') || lower.includes('website')) {
+    return { name: 'Fetch URL', icon: Globe, color: '#10b981' }
+  } else if (lower.includes('code') || lower.includes('python') || lower.includes('execution') || lower.includes('run')) {
+    return { name: 'Code Execution', icon: Code, color: '#f59e0b' }
+  } else if (lower.includes('chart') || lower.includes('visual') || lower.includes('plot') || lower.includes('graph')) {
+    return { name: 'Chart Visualization', icon: LineChart, color: '#ec4899' }
+  }
+
+  return { name: stepTitle, icon: Sparkles, color: 'var(--text-subtle)' }
+}
+
+interface ToolStepBlockProps {
+  step: StepItem
+  isDefaultExpanded: boolean
+  renderSourceIcon: (logo: string) => ReactNode
+}
+
+const ToolStepBlock = ({
+  step,
+  isDefaultExpanded,
+  renderSourceIcon
+}: ToolStepBlockProps) => {
+  const [expanded, setExpanded] = useState(isDefaultExpanded)
+  const [isClosing, setIsClosing] = useState(false)
+  const config = getToolConfig(step.title)
+  const IconComponent = config.icon
+
+  // Auto-close smoothly when the tool step finishes
+  useEffect(() => {
+    if (!step.active && expanded && !isClosing) {
+      const closeTimer = setTimeout(() => {
+        setIsClosing(true)
+        setTimeout(() => {
+          setExpanded(false)
+          setIsClosing(false)
+        }, 320)
+      }, 700)
+      return () => clearTimeout(closeTimer)
+    }
+  }, [step.active])
+
+  const renderExecutionDetails = () => {
+    const lowerTitle = step.title.toLowerCase()
+    const isCode = lowerTitle.includes('code') || lowerTitle.includes('python') || lowerTitle.includes('execution')
+    const isChart = lowerTitle.includes('chart') || lowerTitle.includes('visual') || lowerTitle.includes('plot')
+
+    if (isCode || isChart) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-subtle)' }}>
+            Executed {isCode ? 'Code' : 'Visualization'}:
+          </span>
+          <pre style={{
+            margin: 0,
+            padding: '10px 12px',
+            borderRadius: '8px',
+            backgroundColor: 'var(--surface-strong)',
+            border: '1px solid var(--border)',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontSize: '12px',
+            color: 'var(--text-primary)',
+            overflowX: 'auto',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all'
+          }}>
+            {step.query}
+          </pre>
+        </div>
+      )
+    }
+
+    if (lowerTitle.includes('calc') || lowerTitle.includes('math') || lowerTitle.includes('expression')) {
+      return (
+        <div style={{ fontSize: '13px', color: 'var(--text-subtle)' }}>
+          Calculated expression: <code style={{
+            padding: '2px 6px',
+            borderRadius: '4px',
+            backgroundColor: 'var(--surface-strong)',
+            border: '1px solid var(--border)',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontSize: '12.5px',
+            color: 'var(--text-primary)'
+          }}>{step.query}</code>
+        </div>
+      )
+    }
+
+    if (lowerTitle.includes('fetch') || lowerTitle.includes('url') || lowerTitle.includes('link') || lowerTitle.includes('page')) {
+      return (
+        <div style={{ fontSize: '13px', color: 'var(--text-subtle)' }}>
+          Fetched URL: <a
+            href={step.query}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'var(--accent-teal)',
+              textDecoration: 'none',
+              wordBreak: 'break-all'
+            }}
+          >
+            {step.query}
+          </a>
+        </div>
+      )
+    }
+
+    // Default Web Search fallback
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {step.query && (
+          <div style={{ fontSize: '13.5px', color: 'var(--text-subtle)' }}>
+            Searched for: <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>"{step.query}"</strong>
+          </div>
+        )}
+
+        {step.links && step.links.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-subtle)' }}>
+              Found {step.links.length} sources:
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {step.links.map((link, idx) => (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="tool-link-badge"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '99px',
+                    backgroundColor: 'var(--surface-strong)',
+                    border: '1px solid var(--border)',
+                    fontSize: '12px',
+                    color: 'var(--text-muted)',
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--surface-hover)'
+                    e.currentTarget.style.borderColor = 'var(--border-strong)'
+                    e.currentTarget.style.color = 'var(--text-primary)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--surface-strong)'
+                    e.currentTarget.style.borderColor = 'var(--border)'
+                    e.currentTarget.style.color = 'var(--text-muted)'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    {renderSourceIcon(link.logo)}
+                  </span>
+                  <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {link.title}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="search-tree-container" style={{ margin: '2px 0 4px 0' }}>
+      <button
+        type="button"
+        className="tree-header-btn"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <IconComponent
+          size={14}
+          className={`tree-header-icon ${config.name === 'Searching the web' && step.active ? 'searching-globe-rotate' : ''}`}
+          style={{ color: 'var(--text-subtle)' }}
+        />
+        <span className={`tree-header-text ${config.name === 'Searching the web' && step.active ? 'searching-web-glow' : ''}`}>
+          {config.name}
+        </span>
+        <ChevronDown size={14} className={`tree-chevron ${expanded ? 'expanded' : ''}`} />
+      </button>
+
+      {(expanded || isClosing) && (
+        <div
+          className={`tree-content-wrapper ${isClosing ? 'animate-slide-up' : 'animate-slide-down'}`}
+          style={{ position: 'relative', width: '100%', paddingTop: '6px', paddingBottom: '2px', marginLeft: '7px' }}
+        >
+          <div className="tree-vertical-line" style={{ position: 'absolute', top: 0, bottom: '6px', left: 0, width: '1.5px', backgroundColor: 'var(--border)' }}></div>
+          <div className="tree-items" style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div className="thinking-process-content" style={{ padding: '0 0 6px 0', borderLeft: 'none', width: '100%' }}>
+              {renderExecutionDetails()}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 type CodeBlockProps = {
@@ -411,12 +621,12 @@ const ShikiCodeBlock = ({ inline, className, children }: CodeBlockProps) => {
 
 function App() {
   const [view, setView] = useState<'home' | 'results'>('home')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [_searchQuery, setSearchQuery] = useState('')
   const [prompt, setPrompt] = useState('')
   const [activeTopic, setActiveTopic] = useState('Discover')
   const [selectedFocus, setSelectedFocus] = useState('Search')
   const [selectedModel, setSelectedModel] = useState('Default')
-  const [isComputerMode, setIsComputerMode] = useState(false)
+  // const [isComputerMode, setIsComputerMode] = useState(false)
 
   // Dropdown states
   const [isFocusOpen, setIsFocusOpen] = useState(false)
@@ -434,14 +644,14 @@ function App() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('new')
 
   // Search Results States
-  const [stepsExpanded, setStepsExpanded] = useState(true)
+  // const [stepsExpanded, setStepsExpanded] = useState(true)
   const [activeResultTab, setActiveResultTab] = useState<'Answer' | 'Links' | 'Images'>('Answer')
-  const [searchResultData, setSearchResultData] = useState<ResultData | null>(null)
+  // const [searchResultData, setSearchResultData] = useState<ResultData | null>(null)
 
   // High fidelity live streaming states
-  const [searchStatus, setSearchStatus] = useState<'searching' | 'typing' | 'completed'>('searching')
-  const [streamedAnswer, setStreamedAnswer] = useState('')
-  const [visibleLinksCount, setVisibleLinksCount] = useState(0)
+  // const [searchStatus, setSearchStatus] = useState<'typing' | 'completed'>('typing')
+  // const [streamedAnswer, setStreamedAnswer] = useState('')
+  // const [visibleLinksCount, setVisibleLinksCount] = useState(0)
   const [turns, setTurns] = useState<ChatTurn[]>([])
 
   // Hover link preview card state
@@ -471,12 +681,15 @@ function App() {
   const modelOptions = [
     { id: 'Default', label: 'Default', desc: 'Fast, reliable default model' },
     { id: 'gemma-4-31b-it', label: 'Gemma 4 31B', desc: 'Google GenAI gemma-4-31b-it' },
-    { id: 'mistral-small-latest', label: 'Mistral Small', desc: 'mistral-small-latest via Mistral' }
+    { id: 'mistral-small-latest', label: 'Mistral Small', desc: 'mistral-small-latest via Mistral' },
+    { id: 'openai/gpt-oss-120b', label: 'GPT OSS 120B', desc: 'OpenAI GPT OSS 120B via Groq' }
   ]
 
   const selectedModelLabel = selectedModel === 'Default'
     ? 'Model'
     : (modelOptions.find((option) => option.id === selectedModel)?.label || selectedModel)
+
+  const backendBaseUrl = import.meta.env.VITE_BACKEND_URL?.trim().replace(/\/$/, '') || ''
 
   // Auto-resize textarea on input
   useEffect(() => {
@@ -498,6 +711,55 @@ function App() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Handle hover card mouse tracking and clicking outside to close
+  useEffect(() => {
+    if (!hoverCard || !hoverCard.visible) return
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      const element = document.elementFromPoint(e.clientX, e.clientY)
+      if (!element) return
+
+      const isOverCard = element.closest('.hover-link-preview-card')
+      const isOverTrigger = element.closest('.citation-bubble-link')
+
+      if (!isOverCard && !isOverTrigger) {
+        if (!hoverTimeoutRef.current) {
+          hoverTimeoutRef.current = setTimeout(() => {
+            setHoverCard(prev => prev ? { ...prev, visible: false } : null)
+          }, 150)
+        }
+      } else {
+        if (hoverTimeoutRef.current) {
+          clearTimeout(hoverTimeoutRef.current)
+          hoverTimeoutRef.current = null
+        }
+      }
+    }
+
+    const handleGlobalMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.hover-link-preview-card') && !target.closest('.citation-bubble-link')) {
+        setHoverCard(null)
+      }
+    }
+
+    window.addEventListener('mousemove', handleGlobalMouseMove)
+    window.addEventListener('mousedown', handleGlobalMouseDown)
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove)
+      window.removeEventListener('mousedown', handleGlobalMouseDown)
+    }
+  }, [hoverCard])
+
+  // Cleanup hover timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
   }, [])
 
   // Handle slash `/` command overlay
@@ -582,13 +844,14 @@ function App() {
     const newTurn: ChatTurn = {
       id: newTurnId,
       query: queryText,
-      status: 'searching',
+      status: 'thinking',
       resultData: getResultData(queryText),
       streamedAnswer: '',
       thinkingProcess: '',
       preToolThinking: '',
       postToolThinking: '',
-      thinkingExpanded: true,
+      thinkingExpanded: false,
+      postThinkingExpanded: false,
       visibleLinksCount: 0,
       stepsExpanded: false,
       toolsUsed: false,
@@ -617,7 +880,7 @@ function App() {
     const formatToolLabel = (name: string) => {
       switch (name) {
         case 'web_search':
-          return 'Web Search'
+          return 'Searching the web'
         case 'calculator':
           return 'Calculator'
         case 'fetch_url':
@@ -687,91 +950,212 @@ function App() {
     }
 
     let linkIntervalId: any = null
+    // let scrollScheduled = false
 
-    // Connect to the backend Server-Sent Events (SSE) streaming API
+    // High-fidelity typewriter buffer variables for silky-smooth stream rendering
+    let tokenBuffer = ''
+    let isTypingActive = false
+    let currentStreamedText = ''
+    let streamFinished = false
+
+    const startTypingLoop = () => {
+      if (isTypingActive) return
+      isTypingActive = true
+
+      const typeNext = () => {
+        if (tokenBuffer.length === 0) {
+          isTypingActive = false
+          if (streamFinished) {
+            updateTurn(t => {
+              let cleanedText = currentStreamedText;
+              let parsedRelated: string[] = t.resultData?.related || [];
+
+              const followUpStartIdx = currentStreamedText.indexOf('[FOLLOWUPS]');
+              if (followUpStartIdx !== -1) {
+                cleanedText = currentStreamedText.substring(0, followUpStartIdx).trim();
+
+                const followUpEndIdx = currentStreamedText.indexOf('[/FOLLOWUPS]', followUpStartIdx);
+                const rawFollowUpsContent = followUpEndIdx !== -1
+                  ? currentStreamedText.substring(followUpStartIdx + '[FOLLOWUPS]'.length, followUpEndIdx)
+                  : currentStreamedText.substring(followUpStartIdx + '[FOLLOWUPS]'.length);
+
+                parsedRelated = rawFollowUpsContent
+                  .split('\n')
+                  .map(line => line.replace(/^-\s*/, '').trim())
+                  .filter(line => line.length > 0);
+              }
+
+              return {
+                ...t,
+                status: 'completed',
+                stepsExpanded: false,
+                streamedAnswer: cleanedText,
+                resultData: t.resultData ? {
+                  ...t.resultData,
+                  related: parsedRelated.length > 0 ? parsedRelated : t.resultData.related
+                } : null
+              };
+            });
+          }
+          return
+        }
+
+        // Dynamically adjust characters typed per frame to stay caught up
+        let charsToType = 1
+        if (tokenBuffer.length > 200) {
+          charsToType = 12
+        } else if (tokenBuffer.length > 80) {
+          charsToType = 6
+        } else if (tokenBuffer.length > 30) {
+          charsToType = 3
+        } else if (tokenBuffer.length > 10) {
+          charsToType = 2
+        }
+
+        const chunk = tokenBuffer.slice(0, charsToType)
+        tokenBuffer = tokenBuffer.slice(charsToType)
+        currentStreamedText += chunk
+
+        updateTurn(t => {
+          let cleanedText = currentStreamedText;
+          let parsedRelated: string[] = t.resultData?.related || [];
+          let hasFollowUps = false;
+
+          const followUpStartIdx = currentStreamedText.indexOf('[FOLLOWUPS]');
+          if (followUpStartIdx !== -1) {
+            hasFollowUps = true;
+            cleanedText = currentStreamedText.substring(0, followUpStartIdx).trim();
+
+            const followUpEndIdx = currentStreamedText.indexOf('[/FOLLOWUPS]', followUpStartIdx);
+            const rawFollowUpsContent = followUpEndIdx !== -1
+              ? currentStreamedText.substring(followUpStartIdx + '[FOLLOWUPS]'.length, followUpEndIdx)
+              : currentStreamedText.substring(followUpStartIdx + '[FOLLOWUPS]'.length);
+
+            parsedRelated = rawFollowUpsContent
+              .split('\n')
+              .map(line => line.replace(/^-\s*/, '').trim())
+              .filter(line => line.length > 0);
+          } else {
+            // Strip any partial [FOLLOWUPS] or [/FOLLOWUPS] tag leaking at the end
+            for (const tag of ['[FOLLOWUPS]', '[/FOLLOWUPS]']) {
+              for (let len = tag.length - 1; len >= 1; len--) {
+                if (cleanedText.endsWith(tag.substring(0, len))) {
+                  cleanedText = cleanedText.substring(0, cleanedText.length - len).trim();
+                  break;
+                }
+              }
+            }
+          }
+
+          return {
+            ...t,
+            status: 'typing',
+            stepsExpanded: false,
+            thinkingExpanded: false,
+            streamedAnswer: cleanedText,
+            resultData: t.resultData ? {
+              ...t.resultData,
+              related: hasFollowUps && parsedRelated.length > 0 ? parsedRelated : t.resultData.related
+            } : null
+          };
+        })
+
+        // 12ms timeout yields an incredibly steady, natural flow
+        setTimeout(typeNext, 12)
+      }
+
+      typeNext()
+    }
+
+    const streamQuery = `message=${encodeURIComponent(queryText)}&model=${encodeURIComponent(selectedModel)}`
+
+    // Connect to the backend Server-Sent Events (SSE) streaming API.
+    // Use VITE_BACKEND_URL when the frontend and backend are on different origins.
     const eventSource = new EventSource(
-      `http://localhost:8000/search/stream?q=${encodeURIComponent(queryText)}&model=${encodeURIComponent(selectedModel)}`
+      backendBaseUrl
+        ? `${backendBaseUrl}/stream?${streamQuery}`
+        : `/stream?${streamQuery}`
     )
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data)
 
       switch (data.type) {
-        case 'message_start':
-          if (data.node === 'model') {
-            updateTurn(t => ({
-              ...t,
-              status: t.status === 'searching' || t.status === 'thinking' ? 'typing' : t.status,
-              stepsExpanded: false
-            }))
-          }
-          break
-
+        case 'thinking':
         case 'thought':
           updateTurn(t => {
-            const nextThinkingProcess = (t.thinkingProcess || '') + data.thought
+            const thoughtDelta = data.delta || data.thought || ''
+            const nextThinkingProcess = (t.thinkingProcess || '') + thoughtDelta
             if (t.toolsUsed) {
               return {
                 ...t,
                 status: 'thinking',
                 thinkingProcess: nextThinkingProcess,
-                postToolThinking: (t.postToolThinking || '') + data.thought,
-                thinkingExpanded: true
+                postToolThinking: (t.postToolThinking || '') + thoughtDelta
               }
             } else {
               return {
                 ...t,
                 status: 'thinking',
                 thinkingProcess: nextThinkingProcess,
-                preToolThinking: (t.preToolThinking || '') + data.thought,
-                thinkingExpanded: true
+                preToolThinking: (t.preToolThinking || '') + thoughtDelta
               }
             }
           })
           break
 
+        case 'generating':
         case 'token':
+          const tokenDelta = data.delta || data.token || ''
+          tokenBuffer += tokenDelta
+
           updateTurn(t => {
-            // Clear default mock steps and citations if no tools were executed
+            // Clear default mock steps and citations if no tools were executed on first token
             const resultData = !t.toolsUsed && t.resultData
               ? { ...t.resultData, steps: [], citations: [] }
               : t.resultData
-
             return {
               ...t,
-              status: 'typing',
-              stepsExpanded: false,
-              thinkingExpanded: false,
-              resultData,
-              streamedAnswer: t.streamedAnswer + data.token
+              resultData
             }
           })
 
-          // Auto-scroll viewport during streaming
-          document.getElementById(`turn-${newTurnId}`)?.scrollIntoView({
-            behavior: 'auto',
-            block: 'nearest'
-          })
+          startTypingLoop()
           break
 
         case 'tool_start':
           const toolLabel = formatToolLabel(data.tool)
           const isWebSearch = data.tool === 'web_search'
           updateTurn(t => {
-            const steps = t.resultData && t.resultData.steps.length > 0
-              ? [...t.resultData.steps]
-              : [{ title: toolLabel, query: t.query, links: [] }]
+            let toolQuery = t.query
+            if (data.input) {
+              if (typeof data.input === 'string') {
+                toolQuery = data.input
+              } else if (typeof data.input === 'object') {
+                toolQuery = data.input.query || data.input.expression || data.input.url || data.input.code || JSON.stringify(data.input)
+              }
+            }
 
-            steps[0] = { ...steps[0], title: toolLabel }
+            // Discard mock steps if we are starting a live tool execution for the first time
+            const steps = (!t.toolsUsed || !t.resultData || !t.resultData.steps || t.resultData.steps.length === 0)
+              ? [{ title: toolLabel, query: toolQuery, links: [], active: true }]
+              : [...t.resultData.steps]
+
+            steps[0] = {
+              ...steps[0],
+              title: toolLabel,
+              query: toolQuery,
+              active: true
+            }
 
             // Clear default mock placeholders immediately on web search start
             if (isWebSearch && steps[0]) {
-              steps[0] = { ...steps[0], links: [] }
+              steps[0] = { ...steps[0], links: [], active: true }
             }
 
             return {
               ...t,
-              status: isWebSearch ? 'searching' : 'thinking',
+              status: 'thinking',
               stepsExpanded: true,
               toolsUsed: true,
               visibleLinksCount: isWebSearch ? 0 : t.visibleLinksCount,
@@ -779,6 +1163,14 @@ function App() {
               resultData: t.resultData ? { ...t.resultData, steps } : null
             }
           })
+          break
+
+        case 'tool_delta':
+          updateTurn(t => ({
+            ...t,
+            status: 'thinking',
+            postToolThinking: t.toolsUsed ? `${t.postToolThinking || ''}${data.delta || ''}` : t.postToolThinking
+          }))
           break
 
         case 'search_links':
@@ -803,7 +1195,6 @@ function App() {
 
             return {
               ...t,
-              status: 'analyzing',
               resultData: {
                 ...t.resultData,
                 steps,
@@ -850,8 +1241,9 @@ function App() {
               if (steps[0]) {
                 steps[0] = {
                   ...steps[0],
-                  title: 'Web Search',
-                  links: finalLinks
+                  title: 'Searching the web',
+                  links: finalLinks,
+                  active: false
                 }
               }
 
@@ -875,7 +1267,19 @@ function App() {
               }
             })
           } else {
-            updateTurn(t => ({ ...t, status: 'thinking' }))
+            updateTurn(t => {
+              if (t.resultData && t.resultData.steps && t.resultData.steps[0]) {
+                const steps = [...t.resultData.steps]
+                steps[0] = { ...steps[0], active: false }
+                return {
+                  ...t,
+                  status: 'thinking',
+                  thinkingExpanded: false,
+                  resultData: { ...t.resultData, steps }
+                }
+              }
+              return { ...t, status: 'thinking', thinkingExpanded: false }
+            })
           }
           break
 
@@ -885,10 +1289,8 @@ function App() {
             linkIntervalId = null
           }
           const errMsg = data.message || 'An error occurred.'
-          updateTurn(t => ({
-            ...t,
-            streamedAnswer: t.streamedAnswer ? `${t.streamedAnswer}\n\nNotice: ${errMsg}` : `Notice: ${errMsg}`
-          }))
+          tokenBuffer += `\n\nNotice: ${errMsg}`
+          startTypingLoop()
           break
 
         case 'done':
@@ -896,12 +1298,43 @@ function App() {
             clearInterval(linkIntervalId)
             linkIntervalId = null
           }
-          updateTurn(t => ({
-            ...t,
-            status: 'completed',
-            stepsExpanded: false
-          }))
+          streamFinished = true
           eventSource.close()
+          if (!isTypingActive) {
+            updateTurn(t => {
+              let cleanedText = currentStreamedText;
+              let parsedRelated: string[] = t.resultData?.related || [];
+
+              const followUpStartIdx = currentStreamedText.indexOf('[FOLLOWUPS]');
+              if (followUpStartIdx !== -1) {
+                cleanedText = currentStreamedText.substring(0, followUpStartIdx).trim();
+
+                const followUpEndIdx = currentStreamedText.indexOf('[/FOLLOWUPS]', followUpStartIdx);
+                const rawFollowUpsContent = followUpEndIdx !== -1
+                  ? currentStreamedText.substring(followUpStartIdx + '[FOLLOWUPS]'.length, followUpEndIdx)
+                  : currentStreamedText.substring(followUpStartIdx + '[FOLLOWUPS]'.length);
+
+                parsedRelated = rawFollowUpsContent
+                  .split('\n')
+                  .map(line => line.replace(/^-\s*/, '').trim())
+                  .filter(line => line.length > 0);
+              }
+
+              return {
+                ...t,
+                status: 'completed',
+                stepsExpanded: false,
+                streamedAnswer: cleanedText,
+                resultData: t.resultData ? {
+                  ...t.resultData,
+                  related: parsedRelated.length > 0 ? parsedRelated : t.resultData.related
+                } : null
+              };
+            })
+          }
+          break
+
+        default:
           break
       }
     }
@@ -911,15 +1344,22 @@ function App() {
         clearInterval(linkIntervalId)
         linkIntervalId = null
       }
-      updateTurn(t => {
-        if (t.status === 'completed') return t
-        return {
-          ...t,
-          status: 'completed',
-          streamedAnswer: t.streamedAnswer || 'Streaming failed. Please try again.'
-        }
-      })
       eventSource.close()
+
+      const errorMsg = 'Streaming failed. Please try again.'
+      if (tokenBuffer.length > 0 || isTypingActive) {
+        tokenBuffer += `\n\nNotice: ${errorMsg}`
+        streamFinished = true
+      } else {
+        updateTurn(t => {
+          if (t.status === 'completed') return t
+          return {
+            ...t,
+            status: 'completed',
+            streamedAnswer: t.streamedAnswer || errorMsg
+          }
+        })
+      }
     }
   }
 
@@ -980,11 +1420,14 @@ function App() {
     if (!content) return null
 
     const components: Components = {
-      code: ({ inline, className, children }) => (
-        <ShikiCodeBlock inline={inline} className={className}>
-          {children}
-        </ShikiCodeBlock>
-      ),
+      code: ({ className, children }) => {
+        const inline = !className || !className.startsWith('language-')
+        return (
+          <ShikiCodeBlock inline={inline} className={className}>
+            {children}
+          </ShikiCodeBlock>
+        )
+      },
       p: ({ children }) => (
         <p>{renderWithCitations(children, citations, turn, 'p')}</p>
       ),
@@ -1281,6 +1724,9 @@ function App() {
   }
 
   const handleTriggerMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
     hoverTimeoutRef.current = setTimeout(() => {
       setHoverCard(prev => prev ? { ...prev, visible: false } : null)
     }, 150)
@@ -1308,7 +1754,7 @@ function App() {
         steps: [
           {
             title: "Searching the web",
-            query: "what is vibe coding",
+            query: query,
             links: [
               { title: "What is Vibe Coding? | IBM", url: "https://www.ibm.com/topics/vibe-coding", domain: "ibm", logo: "ibm" },
               { title: "What's up with \"vibe coding\"? : r/OutOfTheLoop", url: "https://www.reddit.com/r/OutOfTheLoop/comments/vibe_coding", domain: "reddit", logo: "reddit" },
@@ -1355,7 +1801,7 @@ The term was popularized in early 2025 by prominent AI researcher Andrej Karpath
         steps: [
           {
             title: "Searching the web",
-            query: "ipl 2026 eliminator srh vs rr match details today",
+            query: query,
             links: [
               { title: "IPL 2026 Eliminator - SRH vs RR Live Match Score & Updates", url: "https://timesofindia.indiatimes.com", domain: "timesofindia.indiatimes", logo: "times" },
               { title: "Sunrisers Hyderabad vs Rajasthan Royals Eliminator Standings", url: "https://indianexpress.com", domain: "indianexpress.com", logo: "express" },
@@ -1363,7 +1809,7 @@ The term was popularized in early 2025 by prominent AI researcher Andrej Karpath
             ]
           },
           {
-            title: "Looking for free SearXNG deployment options",
+            title: "Searching for head-to-head records and team news",
             query: "srh vs rr head to head records and team news",
             links: [
               { title: "IPL Playoffs 2026: Team lineups and pitch report today", url: "https://timesofindia.indiatimes.com", domain: "timesofindia.indiatimes", logo: "times" },
@@ -1421,7 +1867,7 @@ RR had a shaky run toward the end of the league stage but secured their playoff 
         steps: [
           {
             title: "Searching the web",
-            query: "best free SearXNG deployment service no sleep",
+            query: query,
             links: [
               { title: "7 Best Render alternatives for simple app hosting in 2026 | Blog", url: "https://northflank.com", domain: "northflank", logo: "render" },
               { title: "FREE Web and Application Hosting For Your Next Project", url: "https://dev.to", domain: "dev", logo: "dev" },
@@ -1485,7 +1931,7 @@ For a completely independent, always-on self-hosted SearXNG deployment, Oracle C
         steps: [
           {
             title: "Searching the web",
-            query: "mem0 hugging face reranker models performance",
+            query: query,
             links: [
               { title: "Hugging Face Reranker - Mem0 Docs", url: "https://docs.mem0.ai/reranker/huggingface", domain: "docs.mem0.ai", logo: "mem0" },
               { title: "Mem0 Memory Architecture Overview - Mem0 Docs", url: "https://docs.mem0.ai/overview", domain: "docs.mem0.ai", logo: "mem0" },
@@ -1564,6 +2010,7 @@ This response is a premium structural placeholder representing a live retrieval 
   return (
     <div className="app">
       {/* LEFT NAVIGATION SIDEBAR */}
+      {false && (
       <aside className="sidebar">
         <div className="sidebar-top">
           <div className="brand" onClick={resetToHome}>
@@ -1648,6 +2095,7 @@ This response is a premium structural placeholder representing a live retrieval 
           </div>
         </div>
       </aside>
+      )}
 
       {/* ==========================================
          VIEW: 1. HOME SCREEN (LANDING PAGE)
@@ -1700,21 +2148,35 @@ This response is a premium structural placeholder representing a live retrieval 
                     <div className="slash-menu-list">
                       {[
                         { name: 'Search', desc: 'Search across the entire web', icon: Search },
-                        { name: 'Writing', desc: 'Generate text & code, no web search', icon: PenTool },
-                        { name: 'Academic', desc: 'Search peer-reviewed research papers', icon: GraduationCap },
-                        { name: 'YouTube', desc: 'Find and search within videos', icon: Video },
-                        { name: 'Reddit', desc: 'Search discussions, reviews & opinions', icon: MessageSquare },
-                        { name: 'Wikipedia', desc: 'Search high quality articles & facts', icon: Bookmark },
+                        { name: 'Deep Research', desc: 'Coming soon', icon: Sparkles, comingSoon: true },
                       ].map((item) => (
                         <button
                           key={item.name}
                           type="button"
-                          className="slash-menu-item"
-                          onClick={() => handleSlashSelect(item.name)}
+                          className={`slash-menu-item ${item.comingSoon ? 'disabled' : ''}`}
+                          onClick={() => {
+                            if (item.comingSoon) return
+                            handleSlashSelect(item.name)
+                          }}
+                          style={item.comingSoon ? { cursor: 'not-allowed', opacity: 0.6 } : {}}
                         >
                           <item.icon size={16} className="item-icon" />
                           <div className="item-text">
-                            <span className="item-title">{item.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span className="item-title">{item.name}</span>
+                              {item.comingSoon && (
+                                <span className="coming-soon-badge" style={{
+                                  fontSize: '9px',
+                                  background: 'rgba(26, 127, 124, 0.15)',
+                                  color: '#1a7f7c',
+                                  padding: '1.5px 5.5px',
+                                  borderRadius: '4px',
+                                  fontWeight: 600,
+                                  textTransform: 'uppercase',
+                                  lineHeight: 1
+                                }}>Soon</span>
+                              )}
+                            </div>
                             <span className="item-desc">{item.desc}</span>
                           </div>
                         </button>
@@ -1752,21 +2214,35 @@ This response is a premium structural placeholder representing a live retrieval 
                         <div className="dropdown-options">
                           {[
                             { name: 'Search', label: 'All', desc: 'Search across the entire web', icon: Search },
-                            { name: 'Writing', label: 'Writing', desc: 'Generate text & code, no web search', icon: PenTool },
-                            { name: 'Academic', label: 'Academic', desc: 'Search peer-reviewed papers', icon: GraduationCap },
-                            { name: 'YouTube', label: 'YouTube', desc: 'Search and watch videos', icon: Video },
-                            { name: 'Reddit', label: 'Reddit', desc: 'Search discussions & opinions', icon: MessageSquare },
-                            { name: 'Wikipedia', label: 'Wikipedia', desc: 'Search reliable facts', icon: Bookmark }
+                            { name: 'Deep Research', desc: 'Coming soon', icon: Sparkles, comingSoon: true }
                           ].map((item) => (
                             <button
                               key={item.name}
                               type="button"
-                              className={`dropdown-option ${selectedFocus === item.name ? 'selected' : ''}`}
-                              onClick={() => handleFocusSelect(item.name)}
+                              className={`dropdown-option ${selectedFocus === item.name ? 'selected' : ''} ${item.comingSoon ? 'disabled' : ''}`}
+                              onClick={() => {
+                                if (item.comingSoon) return
+                                handleFocusSelect(item.name)
+                              }}
+                              style={item.comingSoon ? { cursor: 'not-allowed', opacity: 0.6 } : {}}
                             >
                               <item.icon size={16} className="opt-icon" />
                               <div className="opt-meta">
-                                <span className="opt-title">{item.name}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span className="opt-title">{item.name}</span>
+                                  {item.comingSoon && (
+                                    <span className="coming-soon-badge" style={{
+                                      fontSize: '9px',
+                                      background: 'rgba(26, 127, 124, 0.15)',
+                                      color: '#1a7f7c',
+                                      padding: '1.5px 5.5px',
+                                      borderRadius: '4px',
+                                      fontWeight: 600,
+                                      textTransform: 'uppercase',
+                                      lineHeight: 1
+                                    }}>Soon</span>
+                                  )}
+                                </div>
                                 <span className="opt-desc">{item.desc}</span>
                               </div>
                               {selectedFocus === item.name && <Check size={14} className="check-icon" />}
@@ -1777,7 +2253,8 @@ This response is a premium structural placeholder representing a live retrieval 
                     )}
                   </div>
 
-                  {/* Computer Mode switch */}
+                  {/* Computer Mode switch (Disabled as per user request) */}
+                  {/*
                   <button
                     type="button"
                     className={`toolbar-pill-btn computer-mode-btn ${isComputerMode ? 'active' : ''}`}
@@ -1787,6 +2264,7 @@ This response is a premium structural placeholder representing a live retrieval 
                     <Monitor size={14} className="pill-icon" />
                     <span>Computer</span>
                   </button>
+                  */}
                 </div>
 
                 <div className="toolbar-right">
@@ -1965,126 +2443,97 @@ This response is a premium structural placeholder representing a live retrieval 
                         <div className="user-query-bubble">{turn.query}</div>
                       </div>
 
-                      {/* PRE-TOOL THINKING TREE VIEW */}
-                      {!turn.toolsUsed && turn.preToolThinking && (
-                        <div className="search-tree-container">
-                          <button
-                            type="button"
-                            className="tree-header-btn"
-                            onClick={() => {
-                              setTurns(prev => prev.map(t => t.id === turn.id ? { ...t, thinkingExpanded: !t.thinkingExpanded } : t))
-                            }}
-                          >
-                            <span className="tree-header-text">
-                              {turn.status === 'thinking' ? 'Thinking...' : 'Thought'}
-                            </span>
-                            <ChevronDown size={14} className={`tree-chevron ${turn.thinkingExpanded ? 'expanded' : ''}`} />
-                          </button>
-
-                          {turn.thinkingExpanded && (
-                            <div className="tree-content-wrapper animate-slide-down">
-                              <div className="tree-vertical-line"></div>
-                              <div className="tree-items" style={{ paddingLeft: '20px', paddingRight: '20px', boxSizing: 'border-box' }}>
-                                <div className="thinking-process-content" style={{ padding: '0 0 12px 0', borderLeft: 'none' }}>
-                                  {turn.preToolThinking}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* SEARCHING THE WEB TREE VIEW */}
-                      {turn.toolsUsed && (
-                        <div className="search-tree-container">
-                          <button
-                            type="button"
-                            className="tree-header-btn"
-                            onClick={() => {
-                              setTurns(prev => prev.map(t => t.id === turn.id ? { ...t, stepsExpanded: !t.stepsExpanded } : t))
-                            }}
-                          >
-                            {(() => {
-                              const stepTitle = turn.resultData?.steps?.[0]?.title?.toLowerCase() || ''
-                              if (stepTitle.includes('calc') || stepTitle.includes('math')) {
-                                return <Calculator size={15} className="tree-header-icon" style={{ marginRight: 6, color: 'var(--text-primary)' }} />
-                              }
-                              if (stepTitle.includes('code') || stepTitle.includes('execut')) {
-                                return <Code size={15} className="tree-header-icon" style={{ marginRight: 6, color: 'var(--text-primary)' }} />
-                              }
-                              if (stepTitle.includes('chart') || stepTitle.includes('visual')) {
-                                return <LineChart size={15} className="tree-header-icon" style={{ marginRight: 6, color: 'var(--text-primary)' }} />
-                              }
-                              return <SearchGlobeIcon className="tree-header-icon" />
-                            })()}
-                            <span className="tree-header-text">
-                              {(() => {
-                                const title = turn.resultData?.steps?.[0]?.title || 'Searching the web'
-                                return turn.status === 'searching' || turn.status === 'thinking' ? `${title}...` : title
-                              })()}
-                            </span>
-                            <ChevronDown size={14} className={`tree-chevron ${turn.stepsExpanded ? 'expanded' : ''}`} />
-                          </button>
-
-                          {turn.stepsExpanded && turn.resultData && (
-                            <div className="tree-content-wrapper animate-slide-down">
-                              <div className="tree-vertical-line"></div>
-                              <div className="tree-items">
-                                {/* 1. Query Item */}
-                                <div className="tree-item query-item">
-                                  <Search size={13} className="tree-item-icon query-icon" />
-                                  <span className="tree-item-text query-text">{turn.query}</span>
-                                </div>
-
-                                {/* 2. Link Items mapped from search step */}
-                                {turn.resultData.steps[0] && turn.resultData.steps[0].links.slice(0, Math.min(turn.visibleLinksCount, 3)).map((link, lIdx) => (
-                                  <a
-                                    key={lIdx}
-                                    href={link.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="tree-item link-item animate-slide-up-gently"
-                                    style={{ animationDuration: '0.3s' }}
-                                    onMouseEnter={(e) => handleTriggerMouseEnter(e, turn, link.domain)}
-                                    onMouseLeave={handleTriggerMouseLeave}
-                                  >
-                                    <span className="tree-item-icon">
-                                      {renderSourceIcon(link.logo)}
+                      {/* MODEL PRE-TOOL THINKING DROPDOWN */}
+                      {((!turn.toolsUsed && (turn.thinkingProcess || turn.preToolThinking || turn.postToolThinking)) ||
+                        (turn.toolsUsed && turn.preToolThinking)) && (
+                          <div className="search-tree-container">
+                            <button
+                              type="button"
+                              className="tree-header-btn"
+                              onClick={() => {
+                                setTurns(prev => prev.map(t => t.id === turn.id ? { ...t, thinkingExpanded: !t.thinkingExpanded } : t))
+                              }}
+                            >
+                              <span className="tree-header-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                {(turn.status === 'thinking' && !turn.toolsUsed) ? (
+                                  <>
+                                    Thinking
+                                    <span className="thinking-dots">
+                                      <span>.</span><span>.</span><span>.</span>
                                     </span>
-                                    <span className="tree-item-title">{link.title}</span>
-                                    <span className="tree-item-domain">{link.domain}</span>
-                                  </a>
-                                ))}
-
-                                {/* 3. Dynamic remaining links Item */}
-                                {turn.resultData.steps[0] && turn.resultData.steps[0].links.length > 3 && turn.visibleLinksCount >= Math.min(turn.resultData.steps[0].links.length, 3) && (
-                                  <div className="tree-item more-item animate-slide-up-gently" style={{ animationDuration: '0.3s' }} onClick={() => setActiveResultTab('Links')}>
-                                    <span className="more-text">+{turn.resultData.steps[0].links.length - 3} more</span>
-                                  </div>
+                                  </>
+                                ) : (
+                                  'Thought'
                                 )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                              </span>
+                              <ChevronDown size={15} className={`tree-chevron ${turn.thinkingExpanded ? 'expanded' : ''}`} />
+                            </button>
 
-                      {/* COLLAPSIBLE THINKING PROCESS BLOCK FOR POST-TOOL THINKING (PREMIUM TREE STYLE) */}
+                            {turn.thinkingExpanded && (
+                              <div className="tree-content-wrapper animate-slide-down">
+                                <div className="tree-vertical-line"></div>
+                                <div className="tree-items" style={{ paddingLeft: '20px', paddingRight: '20px', boxSizing: 'border-box' }}>
+                                  <div className="thinking-process-content" style={{ padding: '0 0 12px 0', borderLeft: 'none' }}>
+                                    {turn.toolsUsed ? turn.preToolThinking : (turn.thinkingProcess || turn.preToolThinking || turn.postToolThinking)}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                      {/* TOOL SUMMARY DROPDOWNS (ONE PER TOOL STEP) */}
+                      {turn.toolsUsed && turn.resultData && turn.resultData.steps && turn.resultData.steps.length > 0 && (() => {
+                        let hasWebSearch = false
+                        const displayedSteps = turn.resultData.steps.filter(step => {
+                          const config = getToolConfig(step.title)
+                          if (config.name === 'Searching the web') {
+                            if (hasWebSearch) return false
+                            hasWebSearch = true
+                          }
+                          return true
+                        })
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                            {displayedSteps.map((step, stepIndex) => (
+                              <ToolStepBlock
+                                key={`${step.title}-${stepIndex}`}
+                                step={step}
+                                isDefaultExpanded={turn.stepsExpanded}
+                                renderSourceIcon={renderSourceIcon}
+                              />
+                            ))}
+                          </div>
+                        )
+                      })()}
+
+                      {/* MODEL POST-TOOL THINKING DROPDOWN */}
                       {turn.toolsUsed && turn.postToolThinking && (
-                        <div className="search-tree-container" style={{ marginTop: '12px' }}>
+                        <div className="search-tree-container">
                           <button
                             type="button"
                             className="tree-header-btn"
                             onClick={() => {
-                              setTurns(prev => prev.map(t => t.id === turn.id ? { ...t, thinkingExpanded: !t.thinkingExpanded } : t))
+                              setTurns(prev => prev.map(t => t.id === turn.id ? { ...t, postThinkingExpanded: !t.postThinkingExpanded } : t))
                             }}
                           >
-                            <span className="tree-header-text">
-                              {turn.status === 'thinking' ? 'Thinking...' : 'Thought'}
+                            <span className="tree-header-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              {(turn.status === 'thinking' && turn.toolsUsed) ? (
+                                <>
+                                  Thinking
+                                  <span className="thinking-dots">
+                                    <span>.</span><span>.</span><span>.</span>
+                                  </span>
+                                </>
+                              ) : (
+                                'Thought'
+                              )}
                             </span>
-                            <ChevronDown size={14} className={`tree-chevron ${turn.thinkingExpanded ? 'expanded' : ''}`} />
+                            <ChevronDown size={14} className={`tree-chevron ${turn.postThinkingExpanded ? 'expanded' : ''}`} />
                           </button>
 
-                          {turn.thinkingExpanded && (
+                          {turn.postThinkingExpanded && (
                             <div className="tree-content-wrapper animate-slide-down">
                               <div className="tree-vertical-line"></div>
                               <div className="tree-items" style={{ paddingLeft: '20px', paddingRight: '20px', boxSizing: 'border-box' }}>
@@ -2098,16 +2547,8 @@ This response is a premium structural placeholder representing a live retrieval 
                       )}
 
                       {/* CITATION RICH LLM ANSWER BODY */}
-                      <div className="llm-response-content-card">
-                        {(turn.status === 'searching' || turn.status === 'analyzing') && (
-                          <div className="live-thinking-shimmer">
-                            <span className="thinking-text-stream">
-                              {turn.status === 'searching' ? 'Searching...' : 'Analyzing sources...'}
-                            </span>
-                          </div>
-                        )}
-
-                        {turn.status !== 'searching' && turn.status !== 'analyzing' && turn.status !== 'thinking' && (
+                      {(turn.status === 'typing' || turn.status === 'completed') && turn.streamedAnswer && (
+                        <div className="llm-response-content-card">
                           <div className="streaming-answer-body animate-fade-in">
                             <MarkdownAnswer
                               content={turn.streamedAnswer}
@@ -2115,11 +2556,11 @@ This response is a premium structural placeholder representing a live retrieval 
                               turn={turn}
                             />
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* RELATED FOLLOW-UP QUESTIONS CARD */}
-                      {turn.status === 'completed' && tIdx === turns.length - 1 && turn.webSearchUsed && turn.resultData && (
+                      {turn.status === 'completed' && tIdx === turns.length - 1 && turn.resultData && turn.resultData.related && turn.resultData.related.length > 0 && (
                         <div className="related-questions-block animate-slide-up-gently">
                           <div className="related-title-row">
                             <h4>Follow-ups</h4>
@@ -2250,21 +2691,35 @@ This response is a premium structural placeholder representing a live retrieval 
                           <div className="dropdown-options">
                             {[
                               { name: 'Search', label: 'All', desc: 'Search across the entire web', icon: Search },
-                              { name: 'Writing', label: 'Writing', desc: 'Generate text & code, no web search', icon: PenTool },
-                              { name: 'Academic', label: 'Academic', desc: 'Search peer-reviewed papers', icon: GraduationCap },
-                              { name: 'YouTube', label: 'YouTube', desc: 'Search and watch videos', icon: Video },
-                              { name: 'Reddit', label: 'Reddit', desc: 'Search discussions & opinions', icon: MessageSquare },
-                              { name: 'Wikipedia', label: 'Wikipedia', desc: 'Search reliable facts', icon: Bookmark }
+                              { name: 'Deep Research', desc: 'Coming soon', icon: Sparkles, comingSoon: true }
                             ].map((item) => (
                               <button
                                 key={item.name}
                                 type="button"
-                                className={`dropdown-option ${selectedFocus === item.name ? 'selected' : ''}`}
-                                onClick={() => handleFocusSelect(item.name)}
+                                className={`dropdown-option ${selectedFocus === item.name ? 'selected' : ''} ${item.comingSoon ? 'disabled' : ''}`}
+                                onClick={() => {
+                                  if (item.comingSoon) return
+                                  handleFocusSelect(item.name)
+                                }}
+                                style={item.comingSoon ? { cursor: 'not-allowed', opacity: 0.6 } : {}}
                               >
                                 <item.icon size={16} className="opt-icon" />
                                 <div className="opt-meta">
-                                  <span className="opt-title">{item.name}</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span className="opt-title">{item.name}</span>
+                                    {item.comingSoon && (
+                                      <span className="coming-soon-badge" style={{
+                                        fontSize: '9px',
+                                        background: 'rgba(26, 127, 124, 0.15)',
+                                        color: '#1a7f7c',
+                                        padding: '1.5px 5.5px',
+                                        borderRadius: '4px',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        lineHeight: 1
+                                      }}>Soon</span>
+                                    )}
+                                  </div>
                                   <span className="opt-desc">{item.desc}</span>
                                 </div>
                                 {selectedFocus === item.name && <Check size={14} className="check-icon" />}

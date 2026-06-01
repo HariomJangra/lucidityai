@@ -1,7 +1,7 @@
 from langchain.tools import tool
 from app.services.websearch import websearch
 from app.core.config import get_settings
-from enh_web_search import websearch
+from app.services.websearch import websearch
 settings = get_settings()
 import requests
 import trafilatura

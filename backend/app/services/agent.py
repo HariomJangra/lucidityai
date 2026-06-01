@@ -1,26 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
-from app.core.config import get_settings
 from app.core.prompts import SYSTEM_PROMPT
 from langchain.chat_models import init_chat_model
 from langchain.agents import create_agent
 from langchain.messages import HumanMessage, SystemMessage
 from app.services.tools import web_search, calculator, fetch_url, code_execution, chart_visualization
-
-settings = get_settings()
-
-DEFAULT_MODEL_ID = "gemma-4-31b-it"
-
-MODEL_CONFIG: Dict[str, Dict[str, Any]] = {
-	"gemma-4-31b-it": {
-		"provider": "google_genai",
-		"api_key": settings.gemini_api_key,
-	},
-	"mistral-small-latest": {
-		"provider": "mistralai",
-		"api_key": settings.mistral_api_key,
-	},
-}
+from app.services.models import DEFAULT_MODEL_ID, MODEL_CONFIG
 
 def build_agent(model_id: Optional[str]) -> Any:
 	resolved_model_id = model_id or DEFAULT_MODEL_ID

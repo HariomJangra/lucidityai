@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     gemini_api_key: SecretStr
     mistral_api_key: SecretStr
+    groq_api_key: SecretStr
     huggingface_api_key: SecretStr
     compiler_api_key: SecretStr
 

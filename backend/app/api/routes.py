@@ -1,120 +1,130 @@
-import json
 import asyncio
+import json
 import threading
-from typing import Optional
+from dataclasses import dataclass
+from typing import Any, AsyncGenerator, Optional
+
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+from langchain.messages import HumanMessage, SystemMessage
 
-from app.services.agent import run_agent, build_agent
+from app.core.prompts import SYSTEM_PROMPT
+from app.services.agent import build_agent
 
 router = APIRouter()
 
 
+@dataclass
 class StreamContext:
-	def __init__(self, loop, queue):
-		self.loop = loop
-		self.queue = queue
+	loop: asyncio.AbstractEventLoop
+	queue: asyncio.Queue[Any]
 
 
-# Global thread-safe registry of active streaming requests
+active_streams: dict[str, list[StreamContext]] = {}
 active_streams_lock = threading.Lock()
-active_streams = {}  # query_str -> list of StreamContext
 
 
-@router.get("/search")
-def search(q: str, model: Optional[str] = None):
-	return {"response": run_agent(q, model)}
+def _sse_payload(data: dict[str, Any]) -> str:
+	return f"data: {json.dumps(data)}\n\n"
 
 
-@router.get("/search/stream")
-async def search_stream(q: str, model: Optional[str] = None):
-	from langchain.messages import HumanMessage, SystemMessage
-	from app.core.prompts import SYSTEM_PROMPT
-
-	# Create async queue and context for this request
-	loop = asyncio.get_running_loop()
-	queue = asyncio.Queue()
-	ctx = StreamContext(loop, queue)
-
-	q_key = f"{q.strip().lower()}::{model or 'default'}"
+def _enqueue_active_streams(user_message: str, context: StreamContext) -> None:
 	with active_streams_lock:
-		if q_key not in active_streams:
-			active_streams[q_key] = []
-		active_streams[q_key].append(ctx)
+		active_streams.setdefault(user_message.strip().lower(), []).append(context)
 
-	agent = build_agent(model)
 
-	def sse(data: dict) -> str:
-		return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-	async def run_agent_events():
+def _dequeue_active_streams(user_message: str, context: StreamContext) -> None:
+	key = user_message.strip().lower()
+	with active_streams_lock:
+		queues = active_streams.get(key)
+		if not queues:
+			return
 		try:
-			await queue.put(sse({"type": "message_start", "node": "model"}))
+			queues.remove(context)
+		except ValueError:
+			pass
+		if not queues:
+			active_streams.pop(key, None)
 
-			stream = await agent.astream_events(
-				{
-					"messages": [
-						SystemMessage(content=SYSTEM_PROMPT),
-						HumanMessage(content=q),
-					]
-				},
-				version="v3",
-			)
 
-			async def consume_messages():
-				async for message in stream.messages:
-					async for delta in message.reasoning:
-						await queue.put(sse({"type": "thought", "thought": str(delta)}))
-					async for delta in message.text:
-						await queue.put(sse({"type": "token", "token": str(delta)}))
+async def event_stream(user_message: str, model_name: Optional[str]) -> AsyncGenerator[str, None]:
+	agent = build_agent(model_name)
+	stream = await agent.astream_events(
+		{
+			"messages": [
+				SystemMessage(content=SYSTEM_PROMPT),
+				HumanMessage(content=user_message),
+			]
+		},
+		version="v3",  # LangChain v3 exposes typed projections like messages and tool_calls.
+	)
 
-			async def consume_tools():
-				async for call in stream.tool_calls:
-					await queue.put(sse({"type": "tool_start", "tool": call.tool_name, "input": str(call.input)}))
-					output = ""
-					async for delta in call.output_deltas:
-						output += str(delta)
-					if not output and call.output:
-						output = str(call.output)
-					if call.error:
-						output = f"{output}\n{call.error}".strip()
-					await queue.put(sse({"type": "tool_end", "tool": call.tool_name, "output": output[:300]}))
+	queue: asyncio.Queue[Any] = asyncio.Queue()
+	context = StreamContext(loop=asyncio.get_running_loop(), queue=queue)
+	sentinel = None
+	_enqueue_active_streams(user_message, context)
 
-			await asyncio.gather(consume_messages(), consume_tools())
+	async def publish_messages() -> None:
+		async for message in stream.messages:
+			async def stream_reasoning() -> None:
+				async for delta in message.reasoning:
+					await queue.put({"type": "thinking", "delta": delta})
 
-		except Exception as e:
-			await queue.put(sse({"type": "error", "message": str(e)}))
-		finally:
-			await queue.put(sse({"type": "done"}))
+			async def stream_text() -> None:
+				async for delta in message.text:
+					await queue.put({"type": "generating", "delta": delta})
 
-	# Start agent runner in the background on the asyncio event loop
-	runner_task = asyncio.create_task(run_agent_events())
+			await asyncio.gather(stream_reasoning(), stream_text())
 
-	async def event_generator():
+	async def publish_tool_calls() -> None:
+		async for item in stream.tool_calls:
+			# These tool events let the frontend show web search links and other tool activity early.
+			await queue.put({
+				"type": "tool_start",
+				"tool": item.tool_name,
+				"input": item.input,
+			})
+			async for delta in item.output_deltas:
+				await queue.put({"type": "tool_delta", "delta": str(delta)})
+			await queue.put({
+				"type": "tool_end",
+				"tool": item.tool_name,
+				"output": str(getattr(item, "output", "")),
+				"error": str(getattr(item, "error", "")) or None,
+			})
+
+	async def run_publishers() -> None:
 		try:
-			while True:
-				event_data = await queue.get()
-				yield event_data
-				if "type\": \"done" in event_data or "type\": \"error" in event_data:
-					break
+			await asyncio.gather(publish_messages(), publish_tool_calls())
 		finally:
-			# Cancel background task if stream is disconnected
-			if not runner_task.done():
-				runner_task.cancel()
-			# Deregister from active streams
-			with active_streams_lock:
-				if q_key in active_streams:
-					if ctx in active_streams[q_key]:
-						active_streams[q_key].remove(ctx)
-					if not active_streams[q_key]:
-						del active_streams[q_key]
+			await queue.put(sentinel)
 
+	producer = asyncio.create_task(run_publishers())
+	try:
+		while True:
+			item = await queue.get()
+			if item is sentinel:
+				break
+			if isinstance(item, str):
+				yield item
+			else:
+				yield _sse_payload(item)
+		await producer
+	finally:
+		_dequeue_active_streams(user_message, context)
+		if not producer.done():
+			producer.cancel()
+
+	yield _sse_payload({"type": "done"})
+
+
+@router.get("/stream")
+async def stream_endpoint(message: str, model: Optional[str] = None) -> StreamingResponse:
 	return StreamingResponse(
-		event_generator(),
+		event_stream(message, model),
 		media_type="text/event-stream",
 		headers={
 			"Cache-Control": "no-cache",
-			"Connection": "keep-alive",
+			"X-Accel-Buffering": "no",
 		},
 	)
-
