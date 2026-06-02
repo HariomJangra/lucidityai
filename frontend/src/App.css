@@ -1592,6 +1592,7 @@
     opacity: 0;
     transform: translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1603,6 +1604,7 @@
     opacity: 1;
     transform: translateY(0);
   }
+
   to {
     opacity: 0;
     transform: translateY(-6px);
@@ -1655,8 +1657,13 @@
 }
 
 @keyframes shimmer-sweep {
-  from { transform: translateX(-120%); }
-  to   { transform: translateX(380%); }
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(380%);
+  }
 }
 
 .searching-web-glow {
@@ -1673,14 +1680,12 @@
   position: absolute;
   inset: -2px 0;
   width: 45%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.55) 35%,
-    rgba(255, 255, 255, 0.35) 50%,
-    rgba(255, 255, 255, 0.55) 65%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.55) 35%,
+      rgba(255, 255, 255, 0.35) 50%,
+      rgba(255, 255, 255, 0.55) 65%,
+      transparent 100%);
   mix-blend-mode: screen;
   animation: shimmer-sweep 3.8s linear infinite;
   will-change: transform;
@@ -1693,6 +1698,7 @@
     opacity: 0;
     transform: translateY(5px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1703,26 +1709,57 @@
   animation: badge-fade-in 0.3s ease both;
 }
 
-.tool-link-badge:nth-child(1)  { animation-delay: 0.00s; }
-.tool-link-badge:nth-child(2)  { animation-delay: 0.05s; }
-.tool-link-badge:nth-child(3)  { animation-delay: 0.10s; }
-.tool-link-badge:nth-child(4)  { animation-delay: 0.15s; }
-.tool-link-badge:nth-child(5)  { animation-delay: 0.20s; }
-.tool-link-badge:nth-child(6)  { animation-delay: 0.25s; }
-.tool-link-badge:nth-child(7)  { animation-delay: 0.30s; }
-.tool-link-badge:nth-child(8)  { animation-delay: 0.35s; }
-.tool-link-badge:nth-child(9)  { animation-delay: 0.40s; }
-.tool-link-badge:nth-child(10) { animation-delay: 0.45s; }
+.tool-link-badge:nth-child(1) {
+  animation-delay: 0.00s;
+}
+
+.tool-link-badge:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.tool-link-badge:nth-child(3) {
+  animation-delay: 0.10s;
+}
+
+.tool-link-badge:nth-child(4) {
+  animation-delay: 0.15s;
+}
+
+.tool-link-badge:nth-child(5) {
+  animation-delay: 0.20s;
+}
+
+.tool-link-badge:nth-child(6) {
+  animation-delay: 0.25s;
+}
+
+.tool-link-badge:nth-child(7) {
+  animation-delay: 0.30s;
+}
+
+.tool-link-badge:nth-child(8) {
+  animation-delay: 0.35s;
+}
+
+.tool-link-badge:nth-child(9) {
+  animation-delay: 0.40s;
+}
+
+.tool-link-badge:nth-child(10) {
+  animation-delay: 0.45s;
+}
 
 @keyframes premium-globe-glow {
   0% {
     transform: scale(1);
     filter: drop-shadow(0 0 2px rgba(26, 127, 124, 0.3));
   }
+
   50% {
     transform: scale(1.12);
     filter: drop-shadow(0 0 8px rgba(26, 127, 124, 0.8));
   }
+
   100% {
     transform: scale(1);
     filter: drop-shadow(0 0 2px rgba(26, 127, 124, 0.3));
