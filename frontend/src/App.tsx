@@ -891,6 +891,12 @@ function App() {
     setTurns(updatedTurns)
     setActiveResultTab('Answer')
 
+    // Update browser URL query parameter
+    const newUrl = `${window.location.origin}/search?q=${encodeURIComponent(queryText)}`
+    if (window.location.href !== newUrl) {
+      window.history.pushState({ query: queryText }, '', newUrl)
+    }
+
     // Scroll viewport to the new turn
     setTimeout(() => {
       document.getElementById(`turn-${newTurnId}`)?.scrollIntoView({
@@ -1498,6 +1504,30 @@ function App() {
     if (query && query.trim()) {
       triggerSearch(query.trim())
     }
+
+    // Handle browser Back/Forward navigation
+    const handlePopState = () => {
+      const currentParams = new URLSearchParams(window.location.search)
+      let currentQuery = currentParams.get('q') || currentParams.get('query')
+
+      if (!currentQuery) {
+        const path = window.location.pathname
+        if (path.startsWith('/search/')) {
+          currentQuery = decodeURIComponent(path.substring(8))
+        } else if (path.startsWith('/searchq=')) {
+          currentQuery = decodeURIComponent(path.substring(9))
+        }
+      }
+
+      if (currentQuery && currentQuery.trim()) {
+        triggerSearch(currentQuery.trim())
+      } else {
+        resetToHome()
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
