@@ -13,28 +13,25 @@ import {
   Search,
   ChevronDown,
   Calculator,
-  Mic,
-  Briefcase,
+  // Briefcase,
   Sparkles,
   LineChart,
   Layers,
   TrendingUp,
-  FileText,
+  // FileText,
   GraduationCap,
-  FileEdit,
+  // FileEdit,
   Code,
   X,
   ArrowRight,
   PenTool,
-  // Video,
+  Video,
   // MessageSquare,
   // Bookmark,
   Check,
   Globe,
   Image as ImageIcon,
-  MoreHorizontal,
-  Share2,
-  Lock,
+  Info,
   ArrowUp
 } from 'lucide-react'
 import './App.css'
@@ -321,7 +318,8 @@ interface ResultData {
   answer: string
   citations: CitationItem[]
   related: string[]
-  images: Array<{ title: string; url: string }>
+  images: Array<{ title: string; url: string; fallback_url?: string }>
+  videos?: Array<{ title: string; url: string; thumbnail?: string; length?: string; iframe_src?: string }>
 }
 
 interface ChatTurn {
@@ -623,10 +621,11 @@ function App() {
   const [view, setView] = useState<'home' | 'results'>('home')
   const [_searchQuery, setSearchQuery] = useState('')
   const [prompt, setPrompt] = useState('')
-  const [activeTopic, setActiveTopic] = useState('Discover')
+  // const [activeTopic, setActiveTopic] = useState('Discover')
   const [selectedFocus, setSelectedFocus] = useState('Search')
   const [selectedModel, setSelectedModel] = useState('Default')
   // const [isComputerMode, setIsComputerMode] = useState(false)
+  const [sessionId, setSessionId] = useState<string>(() => Math.random().toString(36).substring(2, 15))
 
   // Dropdown states
   const [isFocusOpen, setIsFocusOpen] = useState(false)
@@ -645,7 +644,7 @@ function App() {
 
   // Search Results States
   // const [stepsExpanded, setStepsExpanded] = useState(true)
-  const [activeResultTab, setActiveResultTab] = useState<'Answer' | 'Links' | 'Images'>('Answer')
+  const [activeResultTab, setActiveResultTab] = useState<'Answer' | 'Links' | 'Images' | 'Videos'>('Answer')
   // const [searchResultData, setSearchResultData] = useState<ResultData | null>(null)
 
   // High fidelity live streaming states
@@ -653,6 +652,9 @@ function App() {
   // const [streamedAnswer, setStreamedAnswer] = useState('')
   // const [visibleLinksCount, setVisibleLinksCount] = useState(0)
   const [turns, setTurns] = useState<ChatTurn[]>([])
+
+  // Lightbox modal state
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; title: string } | null>(null)
 
   // Hover link preview card state
   const [hoverCard, setHoverCard] = useState<{
@@ -762,6 +764,17 @@ function App() {
     }
   }, [])
 
+  // Handle escape key to close lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLightboxImage(null)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   // Handle slash `/` command overlay
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value
@@ -776,21 +789,21 @@ function App() {
 
   // Suggestions pools
   const poolA: SuggestionItem[] = [
-    { id: '1', text: 'Automate a workflow', label: 'Automate a workflow', icon: Sparkles },
-    { id: '2', text: 'Apply for a job', label: 'Apply for a job', icon: Briefcase },
-    { id: '3', text: 'Build a personal assistant', label: 'Build a personal assistant', icon: Code },
-    { id: '4', text: 'Visualise my data', label: 'Visualise my data', icon: LineChart },
-    { id: '5', text: 'Connect your apps', label: 'Connect your apps', icon: Layers },
-    { id: '6', text: 'Create a side hustle', label: 'Create a side hustle', icon: TrendingUp },
+    { id: '1', text: 'What is the latest update on space exploration?', label: 'Latest space exploration updates', icon: Sparkles },
+    { id: '2', text: 'Compare the specs of the latest electric vehicles', label: 'Compare EV model specifications', icon: Layers },
+    { id: '3', text: 'Summarize the history of artificial intelligence', label: 'History of AI milestones', icon: GraduationCap },
+    { id: '4', text: 'Explain quantum computing in simple terms', label: 'Explain quantum computing simply', icon: Compass },
+    { id: '5', text: 'How do central banks control inflation?', label: 'How inflation is controlled', icon: TrendingUp },
+    { id: '6', text: 'What are the benefits of daily meditation?', label: 'Benefits of daily meditation', icon: Sparkles },
   ]
 
   const poolB: SuggestionItem[] = [
-    { id: '7', text: 'Research a competitor', label: 'Research competitor metrics', icon: TrendingUp },
-    { id: '8', text: 'Analyze a contract PDF', label: 'Extract terms from a PDF', icon: FileText },
-    { id: '9', text: 'Summarize academic research', label: 'Summarize study papers', icon: GraduationCap },
-    { id: '10', text: 'Draft a technical proposal', label: 'Create a project draft', icon: FileEdit },
-    { id: '11', text: 'Generate React components', label: 'Write structured UI code', icon: Code },
-    { id: '12', text: 'Plan a 3-day weekend trip', label: 'Curate a travel itinerary', icon: Compass },
+    { id: '7', text: 'Research major competitors in the AI coding space', label: 'Research AI coding space', icon: TrendingUp },
+    { id: '8', text: 'Explain the difference between SQL and NoSQL databases', label: 'SQL vs NoSQL differences', icon: Layers },
+    { id: '9', text: 'Summarize recent developments in nuclear fusion energy', label: 'Nuclear fusion developments', icon: GraduationCap },
+    { id: '10', text: 'Plan a 3-day travel itinerary for Tokyo', label: '3-day Tokyo itinerary', icon: Compass },
+    { id: '11', text: 'Write a python script to parse CSV and plot data', label: 'Parse CSV and plot data', icon: Code },
+    { id: '12', text: 'What are the health benefits of green tea?', label: 'Benefits of drinking green tea', icon: Sparkles },
   ]
 
   const currentSuggestions = suggestionsPool === 'A' ? poolA : poolB
@@ -845,7 +858,16 @@ function App() {
       id: newTurnId,
       query: queryText,
       status: 'thinking',
-      resultData: getResultData(queryText),
+      resultData: {
+        title: queryText,
+        tab: 'Answer',
+        steps: [],
+        answer: '',
+        citations: [],
+        related: [],
+        images: [],
+        videos: []
+      },
       streamedAnswer: '',
       thinkingProcess: '',
       preToolThinking: '',
@@ -917,11 +939,11 @@ function App() {
           seen.add(url)
           return true
         })
-        .map((url, idx) => {
+        .map((url) => {
           const parts = url.split('//')
           const domain = (parts[1] || parts[0]).split('/')[0].replace('www.', '')
           const cleanDomain = domain.charAt(0).toUpperCase() + domain.slice(1)
-          const title = `${cleanDomain} Reference [${idx + 1}]`
+          const title = cleanDomain
 
           const getLogo = (dom: string) => {
             const domLower = dom.toLowerCase()
@@ -1067,7 +1089,7 @@ function App() {
       typeNext()
     }
 
-    const streamQuery = `message=${encodeURIComponent(queryText)}&model=${encodeURIComponent(selectedModel)}`
+    const streamQuery = `message=${encodeURIComponent(queryText)}&model=${encodeURIComponent(selectedModel)}&session_id=${encodeURIComponent(sessionId)}`
 
     // Connect to the backend Server-Sent Events (SSE) streaming API.
     // Use VITE_BACKEND_URL when the frontend and backend are on different origins.
@@ -1137,21 +1159,37 @@ function App() {
             }
 
             // Discard mock steps if we are starting a live tool execution for the first time
-            const steps = (!t.toolsUsed || !t.resultData || !t.resultData.steps || t.resultData.steps.length === 0)
-              ? [{ title: toolLabel, query: toolQuery, links: [], active: true }]
-              : [...t.resultData.steps]
+            const hasMockSteps = (!t.toolsUsed || !t.resultData || !t.resultData.steps || t.resultData.steps.length === 0)
+            let steps = (hasMockSteps || !t.resultData || !t.resultData.steps) ? [] : [...t.resultData.steps]
 
-            steps[0] = {
-              ...steps[0],
-              title: toolLabel,
-              query: toolQuery,
-              active: true
+            // If it's a web search and we already have a web search step, reuse it!
+            if (isWebSearch && steps.length > 0) {
+              const existingWebSearchIdx = steps.findIndex(s => s.title === 'Searching the web' || s.title === toolLabel)
+              if (existingWebSearchIdx !== -1) {
+                // Reuse existing web search step by making it active again and appending query
+                const step = steps[existingWebSearchIdx]
+                const combinedQuery = step.query && toolQuery && step.query !== toolQuery
+                  ? `${step.query} | ${toolQuery}`
+                  : (toolQuery || step.query)
+                steps[existingWebSearchIdx] = {
+                  ...step,
+                  query: combinedQuery,
+                  active: true
+                }
+
+                return {
+                  ...t,
+                  status: 'thinking',
+                  stepsExpanded: true,
+                  toolsUsed: true,
+                  resultData: t.resultData ? { ...t.resultData, steps } : null
+                }
+              }
             }
 
-            // Clear default mock placeholders immediately on web search start
-            if (isWebSearch && steps[0]) {
-              steps[0] = { ...steps[0], links: [], active: true }
-            }
+            // Otherwise, append a new step
+            const newStep = { title: toolLabel, query: toolQuery, links: [], active: true }
+            steps = [...steps, newStep]
 
             return {
               ...t,
@@ -1179,26 +1217,49 @@ function App() {
             if (!t.resultData) return t
 
             const steps = [...t.resultData.steps]
-            if (steps[0]) {
-              steps[0] = {
-                ...steps[0],
-                links: liveLinks
+            const activeStepIdx = steps.map(s => !!s.active).lastIndexOf(true)
+            const targetIdx = activeStepIdx !== -1 ? activeStepIdx : steps.length - 1
+
+            if (targetIdx >= 0 && steps[targetIdx]) {
+              // Merge live links with existing links in the step, deduplicating by URL
+              const existingLinks = steps[targetIdx].links || []
+              const mergedLinks = [...existingLinks]
+              liveLinks.forEach((link: any) => {
+                if (link.url && !mergedLinks.some(existing => existing.url === link.url)) {
+                  mergedLinks.push(link)
+                }
+              })
+
+              steps[targetIdx] = {
+                ...steps[targetIdx],
+                links: mergedLinks
               }
             }
 
-            const citations = liveLinks.map((link: any, idx: number) => ({
-              id: idx + 1,
-              domain: link.domain,
-              url: link.url,
-              title: link.title
-            }))
+            // Merge citations
+            const mergedCitations = [...t.resultData.citations]
+            liveLinks.forEach((link: any, idx: number) => {
+              const cid = idx + 1
+              const targetIdxCit = mergedCitations.findIndex(c => c.id === cid)
+              const citObj = {
+                id: cid,
+                domain: link.domain,
+                url: link.url,
+                title: link.title
+              }
+              if (targetIdxCit !== -1) {
+                mergedCitations[targetIdxCit] = citObj
+              } else {
+                mergedCitations.push(citObj)
+              }
+            })
 
             return {
               ...t,
               resultData: {
                 ...t.resultData,
                 steps,
-                citations: citations.length > 0 ? citations : t.resultData.citations
+                citations: mergedCitations
               }
             }
           })
@@ -1210,7 +1271,12 @@ function App() {
             linkIntervalId = setInterval(() => {
               currentCount++
               updateTurn(t => {
-                const totalLinks = t.resultData?.steps?.[0]?.links?.length || 0
+                const steps = t.resultData?.steps || []
+                const activeStepIdx = steps.map(s => !!s.active).lastIndexOf(true)
+                const targetIdx = activeStepIdx !== -1 ? activeStepIdx : steps.length - 1
+                const totalLinks = (targetIdx >= 0 && steps[targetIdx])
+                  ? (steps[targetIdx].links?.length || 0)
+                  : 0
                 if (currentCount >= totalLinks) {
                   clearInterval(linkIntervalId)
                 }
@@ -1223,6 +1289,37 @@ function App() {
           }
           break
 
+        case 'media':
+          const liveImages = data.images || []
+          const liveVideos = data.videos || []
+          updateTurn(t => {
+            if (!t.resultData) return t
+
+            const mergedImages = [...t.resultData.images]
+            liveImages.forEach((img: any) => {
+              if (img.url && !mergedImages.some(existing => existing.url === img.url)) {
+                mergedImages.push(img)
+              }
+            })
+
+            const mergedVideos = [...(t.resultData.videos || [])]
+            liveVideos.forEach((vid: any) => {
+              if (vid.url && !mergedVideos.some(existing => existing.url === vid.url)) {
+                mergedVideos.push(vid)
+              }
+            })
+
+            return {
+              ...t,
+              resultData: {
+                ...t.resultData,
+                images: mergedImages,
+                videos: mergedVideos
+              }
+            }
+          })
+          break
+
         case 'tool_end':
           if (linkIntervalId) {
             clearInterval(linkIntervalId)
@@ -1233,44 +1330,64 @@ function App() {
               if (!t.resultData) return t
 
               const steps = [...t.resultData.steps]
-              // Reuse already-loaded live links or fallback to output parsed links
-              const finalLinks = steps[0]?.links && steps[0].links.length > 0
-                ? steps[0].links
+              const activeStepIdx = steps.map(s => !!s.active).lastIndexOf(true)
+              const targetIdx = activeStepIdx !== -1 ? activeStepIdx : steps.length - 1
+
+              const existingLinks = (targetIdx >= 0 && steps[targetIdx]?.links) ? steps[targetIdx].links : []
+
+              // Only use parsed fallback if search_links never populated the step
+              const mergedLinks = existingLinks.length > 0
+                ? [...existingLinks]
                 : parseSearchLinksFromOutput(data.output || '')
 
-              if (steps[0]) {
-                steps[0] = {
-                  ...steps[0],
+              if (targetIdx >= 0 && steps[targetIdx]) {
+                steps[targetIdx] = {
+                  ...steps[targetIdx],
                   title: 'Searching the web',
-                  links: finalLinks,
+                  links: mergedLinks,
                   active: false
                 }
               }
 
-              const citations = finalLinks.map((link, idx) => ({
-                id: idx + 1,
-                domain: link.domain,
-                url: link.url,
-                title: link.title
-              }))
+              // Merge citations
+              const mergedCitations = [...t.resultData.citations]
+              mergedLinks.forEach((link, idx) => {
+                const cid = idx + 1
+                const targetIdxCit = mergedCitations.findIndex(c => c.id === cid)
+                const citObj = {
+                  id: cid,
+                  domain: link.domain,
+                  url: link.url,
+                  title: link.title
+                }
+                if (targetIdxCit !== -1) {
+                  mergedCitations[targetIdxCit] = citObj
+                } else {
+                  mergedCitations.push(citObj)
+                }
+              })
 
               return {
                 ...t,
                 status: 'thinking',
-                visibleLinksCount: finalLinks.length,
+                visibleLinksCount: mergedLinks.length,
                 stepsExpanded: true,
                 resultData: {
                   ...t.resultData,
                   steps,
-                  citations: citations.length > 0 ? citations : t.resultData.citations
+                  citations: mergedCitations
                 }
               }
             })
           } else {
             updateTurn(t => {
-              if (t.resultData && t.resultData.steps && t.resultData.steps[0]) {
+              if (t.resultData && t.resultData.steps) {
                 const steps = [...t.resultData.steps]
-                steps[0] = { ...steps[0], active: false }
+                const activeStepIdx = steps.map(s => !!s.active).lastIndexOf(true)
+                const targetIdx = activeStepIdx !== -1 ? activeStepIdx : steps.length - 1
+                if (targetIdx >= 0 && steps[targetIdx]) {
+                  steps[targetIdx] = { ...steps[targetIdx], active: false }
+                }
                 return {
                   ...t,
                   status: 'thinking',
@@ -1353,10 +1470,12 @@ function App() {
       } else {
         updateTurn(t => {
           if (t.status === 'completed') return t
+          const mockData = getResultData(queryText)
           return {
             ...t,
             status: 'completed',
-            streamedAnswer: t.streamedAnswer || errorMsg
+            streamedAnswer: t.streamedAnswer || mockData.answer || errorMsg,
+            resultData: mockData
           }
         })
       }
@@ -1374,6 +1493,7 @@ function App() {
     setView('home')
     setTurns([])
     setActiveSidebarItem('new')
+    setSessionId(Math.random().toString(36).substring(2, 15))
     if (textareaRef.current) {
       setTimeout(() => textareaRef.current?.focus(), 50)
     }
@@ -2007,94 +2127,148 @@ This response is a premium structural placeholder representing a live retrieval 
     }
   }
 
+  const isWebSearchUsed = turns.some(turn =>
+    turn.webSearchUsed ||
+    (turn.resultData?.images && turn.resultData.images.length > 0) ||
+    (turn.resultData?.videos && turn.resultData.videos.length > 0) ||
+    turn.resultData?.steps?.some(step =>
+      step.title === 'Searching the web' ||
+      step.title.toLowerCase().includes('search')
+    )
+  )
+
+  const allUniqueLinks = (() => {
+    const links: Array<{ title: string; url: string; domain: string; logo: string }> = []
+    const seenUrls = new Set<string>()
+    turns.forEach(turn => {
+      turn.resultData?.steps?.forEach(step => {
+        step.links?.forEach(link => {
+          if (link.url && !seenUrls.has(link.url)) {
+            seenUrls.add(link.url)
+            links.push(link)
+          }
+        })
+      })
+    })
+    return links
+  })()
+
+  const allUniqueImages = (() => {
+    const images: Array<{ title: string; url: string; fallback_url?: string }> = []
+    const seenUrls = new Set<string>()
+    turns.forEach(turn => {
+      turn.resultData?.images?.forEach(image => {
+        if (image.url && !seenUrls.has(image.url)) {
+          seenUrls.add(image.url)
+          images.push(image)
+        }
+      })
+    })
+    return images
+  })()
+
+  const allUniqueVideos = (() => {
+    const videos: Array<{ title: string; url: string; thumbnail?: string; length?: string; iframe_src?: string }> = []
+    const seenUrls = new Set<string>()
+    turns.forEach(turn => {
+      turn.resultData?.videos?.forEach(video => {
+        if (video.url && !seenUrls.has(video.url)) {
+          seenUrls.add(video.url)
+          videos.push(video)
+        }
+      })
+    })
+    return videos
+  })()
+
   return (
     <div className="app">
       {/* LEFT NAVIGATION SIDEBAR */}
       {false && (
-      <aside className="sidebar">
-        <div className="sidebar-top">
-          <div className="brand" onClick={resetToHome}>
-            <PerplexityLogo />
-          </div>
-
-          <button
-            className={`new-thread-btn ${activeSidebarItem === 'new' && view === 'home' ? 'active' : ''}`}
-            onClick={resetToHome}
-            data-tooltip="New Thread (Ctrl + I)"
-          >
-            <Plus size={20} />
-          </button>
-        </div>
-
-        <nav className="sidebar-nav">
-          <button
-            className={`nav-btn ${activeSidebarItem === 'discover' ? 'active' : ''}`}
-            onClick={() => setActiveSidebarItem('discover')}
-            data-tooltip="Discover"
-          >
-            <ChatbotMonitorIcon />
-          </button>
-
-          <button
-            className={`nav-btn ${activeSidebarItem === 'library' ? 'active' : ''}`}
-            onClick={() => setActiveSidebarItem('library')}
-            data-tooltip="Library"
-          >
-            <OverlappingFoldersIcon />
-          </button>
-
-          <button
-            className={`nav-btn ${activeSidebarItem === 'spaces' ? 'active' : ''}`}
-            onClick={() => setActiveSidebarItem('spaces')}
-            data-tooltip="Spaces"
-          >
-            <GridSpacesIcon />
-          </button>
-
-          <button
-            className={`nav-btn ${activeSidebarItem === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveSidebarItem('settings')}
-            data-tooltip="Settings"
-          >
-            <HexagonSettingsIcon />
-          </button>
-
-          <button
-            className={`nav-btn ${activeSidebarItem === 'history' ? 'active' : ''}`}
-            onClick={() => setActiveSidebarItem('history')}
-            data-tooltip="History"
-          >
-            <HistoryClockIcon />
-          </button>
-        </nav>
-
-        {/* BOTTOM DASHBOARD CONTROLS */}
-        <div className="sidebar-footer">
-          <button
-            className="nav-btn bell-btn"
-            onClick={() => alert('Notifications clicked')}
-            data-tooltip="Notifications"
-          >
-            <BellNotificationIcon />
-            <span className="bell-dot"></span>
-          </button>
-
-          <button
-            className="nav-btn invite-btn"
-            onClick={() => setShowSignIn(true)}
-            data-tooltip="Invite Friends"
-          >
-            <UserPlusInviteIcon />
-          </button>
-
-          <div className="profile-avatar-container" onClick={() => setShowSignIn(true)} data-tooltip="Profile Settings">
-            <div className="pro-avatar">
-              <div className="avatar-art-gradient"></div>
+        <aside className="sidebar">
+          <div className="sidebar-top">
+            <div className="brand" onClick={resetToHome}>
+              <PerplexityLogo />
             </div>
-            <span className="pro-badge">Pro</span>
+
+            <button
+              className={`new-thread-btn ${activeSidebarItem === 'new' && view === 'home' ? 'active' : ''}`}
+              onClick={resetToHome}
+              data-tooltip="New Thread (Ctrl + I)"
+            >
+              <Plus size={20} />
+            </button>
           </div>
-        </div>
-      </aside>
+
+          <nav className="sidebar-nav">
+            <button
+              className={`nav-btn ${activeSidebarItem === 'discover' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarItem('discover')}
+              data-tooltip="Discover"
+            >
+              <ChatbotMonitorIcon />
+            </button>
+
+            <button
+              className={`nav-btn ${activeSidebarItem === 'library' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarItem('library')}
+              data-tooltip="Library"
+            >
+              <OverlappingFoldersIcon />
+            </button>
+
+            <button
+              className={`nav-btn ${activeSidebarItem === 'spaces' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarItem('spaces')}
+              data-tooltip="Spaces"
+            >
+              <GridSpacesIcon />
+            </button>
+
+            <button
+              className={`nav-btn ${activeSidebarItem === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarItem('settings')}
+              data-tooltip="Settings"
+            >
+              <HexagonSettingsIcon />
+            </button>
+
+            <button
+              className={`nav-btn ${activeSidebarItem === 'history' ? 'active' : ''}`}
+              onClick={() => setActiveSidebarItem('history')}
+              data-tooltip="History"
+            >
+              <HistoryClockIcon />
+            </button>
+          </nav>
+
+          {/* BOTTOM DASHBOARD CONTROLS */}
+          <div className="sidebar-footer">
+            <button
+              className="nav-btn bell-btn"
+              onClick={() => alert('Notifications clicked')}
+              data-tooltip="Notifications"
+            >
+              <BellNotificationIcon />
+              <span className="bell-dot"></span>
+            </button>
+
+            <button
+              className="nav-btn invite-btn"
+              onClick={() => setShowSignIn(true)}
+              data-tooltip="Invite Friends"
+            >
+              <UserPlusInviteIcon />
+            </button>
+
+            <div className="profile-avatar-container" onClick={() => setShowSignIn(true)} data-tooltip="Profile Settings">
+              <div className="pro-avatar">
+                <div className="avatar-art-gradient"></div>
+              </div>
+              <span className="pro-badge">Pro</span>
+            </div>
+          </div>
+        </aside>
       )}
 
       {/* ==========================================
@@ -2103,6 +2277,7 @@ This response is a premium structural placeholder representing a live retrieval 
       {view === 'home' && (
         <main className="main-content">
           {/* TOP TOPICS NAVIGATION */}
+          {/*
           <header className="main-header">
             <nav className="topics-nav">
               {['Discover', 'Finance', 'Health', 'Academic', 'Patents'].map((topic) => (
@@ -2116,6 +2291,7 @@ This response is a premium structural placeholder representing a live retrieval 
               ))}
             </nav>
           </header>
+          */}
 
           {/* HERO SECTION */}
           <section className="hero-section">
@@ -2130,7 +2306,7 @@ This response is a premium structural placeholder representing a live retrieval 
                   ref={textareaRef}
                   value={prompt}
                   onChange={handleTextareaChange}
-                  placeholder="Type / for search modes"
+                  placeholder="Ask anything..."
                   rows={1}
                   className="search-textarea"
                   onKeyDown={(e) => {
@@ -2189,9 +2365,6 @@ This response is a premium structural placeholder representing a live retrieval 
               {/* BOTTOM TOOLBAR */}
               <div className="search-toolbar">
                 <div className="toolbar-left">
-                  <button type="button" className="toolbar-icon-btn attach-btn" data-tooltip="Attach files or tools">
-                    <Plus size={16} />
-                  </button>
 
                   {/* Focus dropdown container */}
                   <div className="dropdown-container" ref={focusDropdownRef}>
@@ -2305,27 +2478,14 @@ This response is a premium structural placeholder representing a live retrieval 
                     )}
                   </div>
 
-                  {/* Voice button */}
-                  <button type="button" className="toolbar-icon-btn voice-dictation" data-tooltip="Use voice dictation">
-                    <Mic size={16} />
-                  </button>
-
-                  {/* Main Submit Circular Waveform Button */}
+                  {/* Main Submit Circular Button */}
                   <button
                     type="submit"
                     disabled={!prompt.trim()}
                     className={`submit-circle-btn ${prompt.trim() ? 'enabled' : ''}`}
                     aria-label="Submit search"
                   >
-                    {prompt.trim() ? (
-                      <ArrowRight size={18} />
-                    ) : (
-                      <div className="waveform-container">
-                        <span className="wave-bar bar-1"></span>
-                        <span className="wave-bar bar-2"></span>
-                        <span className="wave-bar bar-3"></span>
-                      </div>
-                    )}
+                    <ArrowRight size={18} />
                   </button>
                 </div>
               </div>
@@ -2336,7 +2496,7 @@ This response is a premium structural placeholder representing a live retrieval 
               <div className="suggestions-header">
                 <div className="suggestions-title-group">
                   <Sparkles size={16} className="title-icon" />
-                  <span>Try out Lucidity Computer</span>
+                  <span>Try asking Lucidity AI</span>
                 </div>
 
                 <button
@@ -2386,12 +2546,14 @@ This response is a premium structural placeholder representing a live retrieval 
               <div className="header-left-tabs">
                 {[
                   { name: 'Answer', icon: PenTool },
-                  { name: 'Links', icon: Globe },
-                  { name: 'Images', icon: ImageIcon }
+                  { name: 'Images', icon: ImageIcon },
+                  { name: 'Videos', icon: Video },
+                  { name: 'Links', icon: Globe }
                 ].map((tabItem) => (
                   <button
                     key={tabItem.name}
                     className={`result-header-tab ${activeResultTab === tabItem.name ? 'active' : ''}`}
+                    disabled={!isWebSearchUsed && tabItem.name !== 'Answer'}
                     onClick={() => setActiveResultTab(tabItem.name as any)}
                   >
                     {tabItem.name === 'Answer' ? (
@@ -2407,15 +2569,16 @@ This response is a premium structural placeholder representing a live retrieval 
               </div>
 
               <div className="header-right-actions">
-                <button className="icon-action-btn" data-tooltip="More actions">
-                  <MoreHorizontal size={18} />
-                </button>
-
-                <button className="share-pill-btn" onClick={() => alert('Citation Link Copied!')}>
-                  <Share2 size={14} className="share-icon" />
-                  <span>Share</span>
-                  <Lock size={12} className="lock-icon" />
-                </button>
+                <a
+                  className="share-pill-btn"
+                  href="https://virtualatoms.vercel.app/#products/lucidity"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <Info size={14} className="share-icon" />
+                  <span>About</span>
+                </a>
               </div>
             </header>
 
@@ -2484,15 +2647,7 @@ This response is a premium structural placeholder representing a live retrieval 
 
                       {/* TOOL SUMMARY DROPDOWNS (ONE PER TOOL STEP) */}
                       {turn.toolsUsed && turn.resultData && turn.resultData.steps && turn.resultData.steps.length > 0 && (() => {
-                        let hasWebSearch = false
-                        const displayedSteps = turn.resultData.steps.filter(step => {
-                          const config = getToolConfig(step.title)
-                          if (config.name === 'Searching the web') {
-                            if (hasWebSearch) return false
-                            hasWebSearch = true
-                          }
-                          return true
-                        })
+                        const displayedSteps = turn.resultData.steps
 
                         return (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
@@ -2588,14 +2743,14 @@ This response is a premium structural placeholder representing a live retrieval 
               )}
 
               {/* TABS: LINKS DASHBOARD */}
-              {activeResultTab === 'Links' && turns[turns.length - 1] && (
+              {activeResultTab === 'Links' && isWebSearchUsed && turns[turns.length - 1] && (
                 <div className="tab-links-view animate-fade-in">
                   <div className="section-intro-text">
-                    All referenced source links found for: <strong>"{turns[turns.length - 1].query}"</strong>
+                    All referenced source links found in this session
                   </div>
 
                   <div className="referenced-links-grid">
-                    {turns[turns.length - 1].resultData?.steps.flatMap(s => s.links).map((link, idx) => (
+                    {allUniqueLinks.map((link, idx) => (
                       <a
                         key={idx}
                         href={link.url}
@@ -2619,20 +2774,83 @@ This response is a premium structural placeholder representing a live retrieval 
               )}
 
               {/* TABS: IMAGES SEARCH GALLERY */}
-              {activeResultTab === 'Images' && turns[turns.length - 1] && (
+              {activeResultTab === 'Images' && isWebSearchUsed && turns[turns.length - 1] && (
                 <div className="tab-images-view animate-fade-in">
                   <div className="section-intro-text">
-                    Visual gallery search result results for: <strong>"{turns[turns.length - 1].query}"</strong>
+                    Visual gallery search results found in this session
                   </div>
 
                   <div className="visuals-result-gallery-grid">
-                    {turns[turns.length - 1].resultData?.images.map((image, idx) => (
-                      <div key={idx} className="gallery-photo-card">
+                    {allUniqueImages.map((image, idx) => (
+                      <div
+                        key={idx}
+                        className="gallery-photo-card"
+                        onClick={() => setLightboxImage({ url: image.url, title: image.title })}
+                      >
                         <div className="photo-ratio-box">
-                          <img src={image.url} alt={image.title} className="gallery-img" />
+                          <img
+                            src={image.url}
+                            alt={image.title}
+                            className="gallery-img"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (image.fallback_url && target.src !== image.fallback_url) {
+                                target.src = image.fallback_url;
+                              } else {
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.classList.add('image-fallback-placeholder');
+                                  parent.innerHTML = `
+                                    <div class="fallback-icon-box">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); opacity: 0.6;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                    </div>
+                                  `;
+                                }
+                              }
+                            }}
+                          />
                         </div>
                         <span className="photo-title-lbl">{image.title}</span>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TABS: VIDEOS SEARCH GALLERY */}
+              {activeResultTab === 'Videos' && isWebSearchUsed && turns[turns.length - 1] && (
+                <div className="tab-videos-view animate-fade-in">
+                  <div className="section-intro-text">
+                    Video search results found in this session
+                  </div>
+
+                  <div className="visuals-result-gallery-grid">
+                    {allUniqueVideos.map((video, idx) => (
+                      <a
+                        key={idx}
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gallery-photo-card video-card"
+                      >
+                        <div className="photo-ratio-box video-ratio-box">
+                          {video.thumbnail ? (
+                            <img src={video.thumbnail} alt={video.title} className="gallery-img" />
+                          ) : (
+                            <div className="video-placeholder-icon">
+                              <Video size={32} />
+                            </div>
+                          )}
+                          <div className="video-play-overlay">
+                            <span className="play-triangle">▶</span>
+                          </div>
+                          {video.length && (
+                            <span className="video-duration-badge">{video.length}</span>
+                          )}
+                        </div>
+                        <span className="photo-title-lbl video-title-lbl">{video.title}</span>
+                      </a>
                     ))}
                   </div>
                 </div>
@@ -2667,9 +2885,6 @@ This response is a premium structural placeholder representing a live retrieval 
 
                 <div className="search-toolbar follow-up-toolbar">
                   <div className="toolbar-left">
-                    <button type="button" className="toolbar-icon-btn attach-btn" data-tooltip="Attach files or images">
-                      <Plus size={16} />
-                    </button>
 
                     <div className="dropdown-container" ref={focusDropdownRef}>
                       <button
@@ -2767,10 +2982,6 @@ This response is a premium structural placeholder representing a live retrieval 
                         </div>
                       )}
                     </div>
-
-                    <button type="button" className="toolbar-icon-btn voice-dictation" data-tooltip="Voice Input">
-                      <Mic size={16} />
-                    </button>
 
                     <button
                       type="submit"
@@ -2903,6 +3114,27 @@ This response is a premium structural placeholder representing a live retrieval 
             <p className="preview-page-snippet">
               {hoverCard.links[hoverCard.currentIndex].snippet}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* IMAGE LIGHTBOX OVERLAY */}
+      {lightboxImage && (
+        <div className="lightbox-overlay" onClick={() => setLightboxImage(null)}>
+          <div className="lightbox-container" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="lightbox-close-btn"
+              onClick={() => setLightboxImage(null)}
+              aria-label="Close image lightbox"
+            >
+              <X size={20} />
+            </button>
+            <div className="lightbox-image-wrapper">
+              <img src={lightboxImage.url} alt={lightboxImage.title} className="lightbox-image" />
+            </div>
+            {lightboxImage.title && (
+              <div className="lightbox-caption">{lightboxImage.title}</div>
+            )}
           </div>
         </div>
       )}

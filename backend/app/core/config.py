@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,4 +21,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+SEARXNG_URL = os.getenv("SEARXNG_URL")
 

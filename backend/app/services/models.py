@@ -3,10 +3,10 @@ from app.core.config import get_settings
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 # Bi Encoder
-bi_encoder = SentenceTransformer('BAAI/bge-base-en-v1.5')
+bi_encoder = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
 # Cross Encoder
-cross_encoder = CrossEncoder('BAAI/bge-reranker-base')
+cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
 # LLM Models Configuration
 settings = get_settings()

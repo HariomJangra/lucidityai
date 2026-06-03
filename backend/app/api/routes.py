@@ -6,10 +6,11 @@ from typing import Any, AsyncGenerator, Optional
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from langchain.messages import HumanMessage, SystemMessage
+from langchain.messages import HumanMessage, SystemMessage, AIMessage
 
 from app.core.prompts import SYSTEM_PROMPT
 from app.services.agent import build_agent
+from app.services.memory import memory_manager
 
 router = APIRouter()
 
@@ -47,14 +48,23 @@ def _dequeue_active_streams(user_message: str, context: StreamContext) -> None:
 			active_streams.pop(key, None)
 
 
-async def event_stream(user_message: str, model_name: Optional[str]) -> AsyncGenerator[str, None]:
+async def event_stream(
+	user_message: str,
+	model_name: Optional[str],
+	session_id: Optional[str] = None
+) -> AsyncGenerator[str, None]:
 	agent = build_agent(model_name)
+	
+	history_messages = []
+	if session_id:
+		history = memory_manager.get_history(session_id)
+		history_messages = history.messages
+
+	input_messages = [SystemMessage(content=SYSTEM_PROMPT)] + history_messages + [HumanMessage(content=user_message)]
+
 	stream = await agent.astream_events(
 		{
-			"messages": [
-				SystemMessage(content=SYSTEM_PROMPT),
-				HumanMessage(content=user_message),
-			]
+			"messages": input_messages
 		},
 		version="v3",  # LangChain v3 exposes typed projections like messages and tool_calls.
 	)
@@ -64,6 +74,8 @@ async def event_stream(user_message: str, model_name: Optional[str]) -> AsyncGen
 	sentinel = None
 	_enqueue_active_streams(user_message, context)
 
+	full_response = []
+
 	async def publish_messages() -> None:
 		async for message in stream.messages:
 			async def stream_reasoning() -> None:
@@ -72,6 +84,7 @@ async def event_stream(user_message: str, model_name: Optional[str]) -> AsyncGen
 
 			async def stream_text() -> None:
 				async for delta in message.text:
+					full_response.append(delta)
 					await queue.put({"type": "generating", "delta": delta})
 
 			await asyncio.gather(stream_reasoning(), stream_text())
@@ -110,6 +123,14 @@ async def event_stream(user_message: str, model_name: Optional[str]) -> AsyncGen
 			else:
 				yield _sse_payload(item)
 		await producer
+
+		# Save to history when execution succeeds fully
+		if session_id:
+			history = memory_manager.get_history(session_id)
+			history.add_message(HumanMessage(content=user_message))
+			final_text = "".join(full_response)
+			if final_text:
+				history.add_message(AIMessage(content=final_text))
 	finally:
 		_dequeue_active_streams(user_message, context)
 		if not producer.done():
@@ -119,9 +140,13 @@ async def event_stream(user_message: str, model_name: Optional[str]) -> AsyncGen
 
 
 @router.get("/stream")
-async def stream_endpoint(message: str, model: Optional[str] = None) -> StreamingResponse:
+async def stream_endpoint(
+	message: str,
+	model: Optional[str] = None,
+	session_id: Optional[str] = None
+) -> StreamingResponse:
 	return StreamingResponse(
-		event_stream(message, model),
+		event_stream(message, model, session_id),
 		media_type="text/event-stream",
 		headers={
 			"Cache-Control": "no-cache",
