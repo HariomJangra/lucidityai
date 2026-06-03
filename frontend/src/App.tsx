@@ -623,7 +623,9 @@ function App() {
   const [prompt, setPrompt] = useState('')
   // const [activeTopic, setActiveTopic] = useState('Discover')
   const [selectedFocus, setSelectedFocus] = useState('Search')
-  const [selectedModel, setSelectedModel] = useState('Default')
+  const [selectedModel, setSelectedModel] = useState<string>(
+    () => localStorage.getItem('lucidity_selected_model') || 'Default'
+  )
   // const [isComputerMode, setIsComputerMode] = useState(false)
   const [sessionId, setSessionId] = useState<string>(() => Math.random().toString(36).substring(2, 15))
 
@@ -831,6 +833,7 @@ function App() {
 
   const handleModelSelect = (model: string) => {
     setSelectedModel(model)
+    localStorage.setItem('lucidity_selected_model', model)
     setIsModelOpen(false)
     if (textareaRef.current) {
       textareaRef.current.focus()
@@ -2630,6 +2633,15 @@ This response is a premium structural placeholder representing a live retrieval 
               </div>
 
               <div className="header-right-actions">
+                <button
+                  className="new-thread-header-btn"
+                  onClick={resetToHome}
+                  title="New Thread"
+                  aria-label="Start new thread"
+                >
+                  <Plus size={15} />
+                  <span>New Thread</span>
+                </button>
                 <a
                   className="share-pill-btn"
                   href="https://virtualatoms.vercel.app/#products/lucidity"
