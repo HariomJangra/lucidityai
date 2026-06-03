@@ -1482,6 +1482,25 @@ function App() {
     }
   }
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    let query = params.get('q') || params.get('query')
+
+    if (!query) {
+      const path = window.location.pathname
+      if (path.startsWith('/search/')) {
+        query = decodeURIComponent(path.substring(8))
+      } else if (path.startsWith('/searchq=')) {
+        query = decodeURIComponent(path.substring(9))
+      }
+    }
+
+    if (query && query.trim()) {
+      triggerSearch(query.trim())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     triggerSearch(prompt)
