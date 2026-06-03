@@ -3041,3 +3041,46 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Premium Red Error Callout Box */
+.error-text-red {
+  color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.06);
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.03);
+}
+
+.error-text-red p,
+.error-text-red .markdown-body,
+.error-text-red .markdown-body p {
+  color: #ef4444 !important;
+  margin: 0 !important;
+  font-weight: 500;
+}
+
+/* Global Top-Right About Button */
+.global-about-btn {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 101;
+  background-color: transparent !important;
+  color: var(--text-muted) !important;
+  border: 1.5px solid var(--border-strong) !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+.global-about-btn:hover {
+  background-color: var(--surface-hover) !important;
+  border-color: var(--text-subtle) !important;
+  color: var(--text-primary) !important;
+}

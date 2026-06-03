@@ -337,6 +337,7 @@ interface ChatTurn {
   stepsExpanded: boolean
   toolsUsed?: boolean
   webSearchUsed?: boolean
+  isError?: boolean
 }
 
 const SHIKI_THEME = 'github-light'
@@ -1483,12 +1484,21 @@ function App() {
       } else {
         updateTurn(t => {
           if (t.status === 'completed') return t
-          const mockData = getResultData(queryText)
           return {
             ...t,
             status: 'completed',
-            streamedAnswer: t.streamedAnswer || mockData.answer || errorMsg,
-            resultData: mockData
+            streamedAnswer: 'Error: Could not connect to the server. Please try again.',
+            isError: true,
+            resultData: {
+              title: queryText,
+              tab: 'Answer',
+              steps: [],
+              answer: '',
+              citations: [],
+              related: [],
+              images: [],
+              videos: []
+            }
           }
         })
       }
@@ -1927,6 +1937,7 @@ function App() {
   }
 
   // Database of Mock Search Results
+  // @ts-ignore
   const getResultData = (query: string): ResultData => {
     const q = query.toLowerCase()
 
@@ -2247,6 +2258,17 @@ This response is a premium structural placeholder representing a live retrieval 
 
   return (
     <div className="app">
+      {/* GLOBAL ABOUT BUTTON */}
+      <a
+        className="share-pill-btn global-about-btn"
+        href="https://virtualatoms.vercel.app/#products/lucidity"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ textDecoration: 'none' }}
+      >
+        <Info size={14} className="share-icon" />
+        <span>About</span>
+      </a>
       {/* LEFT NAVIGATION SIDEBAR */}
       {false && (
         <aside className="sidebar">
@@ -2642,16 +2664,6 @@ This response is a premium structural placeholder representing a live retrieval 
                   <Plus size={15} />
                   <span>New Thread</span>
                 </button>
-                <a
-                  className="share-pill-btn"
-                  href="https://virtualatoms.vercel.app/#products/lucidity"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ textDecoration: 'none' }}
-                >
-                  <Info size={14} className="share-icon" />
-                  <span>About</span>
-                </a>
               </div>
             </header>
 
@@ -2777,7 +2789,7 @@ This response is a premium structural placeholder representing a live retrieval 
                       {/* CITATION RICH LLM ANSWER BODY */}
                       {(turn.status === 'typing' || turn.status === 'completed') && turn.streamedAnswer && (
                         <div className="llm-response-content-card">
-                          <div className="streaming-answer-body animate-fade-in">
+                          <div className={`streaming-answer-body animate-fade-in ${turn.isError ? 'error-text-red' : ''}`}>
                             <MarkdownAnswer
                               content={turn.streamedAnswer}
                               citations={turn.resultData ? turn.resultData.citations : []}
