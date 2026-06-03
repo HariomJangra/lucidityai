@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/stream", "destination": "http://140.245.214.1:8000/stream" },
+    { "source": "/stream", "destination": "http://13.233.71.86:8000/stream" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
