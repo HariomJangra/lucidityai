@@ -852,6 +852,7 @@ function App() {
   const triggerSearch = (queryText: string) => {
     if (!queryText.trim()) return
     setPrompt('')
+    const isFirstSearch = view === 'home'
 
     const newTurnId = Math.random().toString(36).substring(7)
     const newTurn: ChatTurn = {
@@ -891,10 +892,13 @@ function App() {
     setTurns(updatedTurns)
     setActiveResultTab('Answer')
 
-    // Update browser URL query parameter
-    const newUrl = `${window.location.origin}/search?q=${encodeURIComponent(queryText)}`
-    if (window.location.href !== newUrl) {
-      window.history.pushState({ query: queryText }, '', newUrl)
+    // Update browser URL and title for the first query in a session
+    if (isFirstSearch) {
+      const newUrl = `${window.location.origin}/search?q=${encodeURIComponent(queryText)}`
+      if (window.location.href !== newUrl) {
+        window.history.pushState({ query: queryText }, '', newUrl)
+      }
+      document.title = `${queryText} - Lucidity AI`
     }
 
     // Scroll viewport to the new turn
@@ -1520,8 +1524,10 @@ function App() {
       }
 
       if (currentQuery && currentQuery.trim()) {
+        document.title = `${currentQuery.trim()} - Lucidity AI`
         triggerSearch(currentQuery.trim())
       } else {
+        document.title = 'Lucidity AI'
         resetToHome()
       }
     }
@@ -1546,6 +1552,12 @@ function App() {
     if (textareaRef.current) {
       setTimeout(() => textareaRef.current?.focus(), 50)
     }
+
+    // Reset browser URL and title to homepage defaults
+    if (window.location.pathname !== '/' || window.location.search !== '') {
+      window.history.pushState({ query: '' }, '', window.location.origin + '/')
+    }
+    document.title = 'Lucidity AI'
   }
 
   const renderCitationsInText = (value: string, citations: CitationItem[], turn: ChatTurn, keyPrefix = 'citation') => {
