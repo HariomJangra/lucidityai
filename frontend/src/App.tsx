@@ -1414,15 +1414,42 @@ function App() {
           }
           break
 
-        case 'error':
+        case 'error': {
           if (linkIntervalId) {
             clearInterval(linkIntervalId)
             linkIntervalId = null
           }
           const errMsg = data.message || 'An error occurred.'
-          tokenBuffer += `\n\nNotice: ${errMsg}`
-          startTypingLoop()
+          eventSource.close()
+          streamFinished = true
+
+          if (tokenBuffer.length === 0 && !isTypingActive && currentStreamedText.length === 0) {
+            // Nothing rendered yet — show a clean red error card
+            updateTurn(t => ({
+              ...t,
+              status: 'completed',
+              streamedAnswer: errMsg,
+              isError: true,
+              resultData: {
+                title: queryText,
+                tab: 'Answer',
+                steps: [],
+                answer: '',
+                citations: [],
+                related: [],
+                images: [],
+                videos: []
+              }
+            }))
+          } else {
+            // Already typed something — append the error message in red after current content
+            tokenBuffer += `\n\n⚠️ ${errMsg}`
+            startTypingLoop()
+            // Mark the turn as error so the answer area gets red styling
+            updateTurn(t => ({ ...t, isError: true }))
+          }
           break
+        }
 
         case 'done':
           if (linkIntervalId) {

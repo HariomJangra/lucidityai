@@ -109,6 +109,19 @@ async def event_stream(
 	async def run_publishers() -> None:
 		try:
 			await asyncio.gather(publish_messages(), publish_tool_calls())
+		except Exception as e:
+			err_str = str(e).lower()
+			# Detect rate-limit / overload errors from common AI providers
+			if any(kw in err_str for kw in [
+				"rate limit", "ratelimit", "rate_limit",
+				"429", "529", "too many requests",
+				"overloaded", "overload", "quota", "resource_exhausted",
+				"capacity", "service unavailable", "503",
+			]):
+				user_msg = "API rate limit reached or the AI service is currently overloaded. Please wait a moment and try again."
+			else:
+				user_msg = f"An unexpected error occurred: {str(e)}"
+			await queue.put({"type": "error", "message": user_msg})
 		finally:
 			await queue.put(sentinel)
 
