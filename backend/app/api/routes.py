@@ -8,7 +8,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from langchain.messages import HumanMessage, SystemMessage, AIMessage
 
-from app.core.prompts import SYSTEM_PROMPT
+from app.core.prompts import get_system_prompt
 from app.services.agent import build_agent
 from app.services.memory import memory_manager
 
@@ -60,7 +60,7 @@ async def event_stream(
 		history = memory_manager.get_history(session_id)
 		history_messages = history.messages
 
-	input_messages = [SystemMessage(content=SYSTEM_PROMPT)] + history_messages + [HumanMessage(content=user_message)]
+	input_messages = [SystemMessage(content=get_system_prompt())] + history_messages + [HumanMessage(content=user_message)]
 
 	stream = await agent.astream_events(
 		{

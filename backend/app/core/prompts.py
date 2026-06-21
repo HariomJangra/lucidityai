@@ -3,7 +3,8 @@ from datetime import datetime
 def get_current_datetime() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-SYSTEM_PROMPT = f"""You are Lucidity AI, an AI-powered answer engine created by Hariom Jangra.
+def get_system_prompt() -> str:
+    return f"""You are Lucidity AI, an AI-powered answer engine created by Hariom Jangra.
 You provide precise, evidence-based, and optimized answers with clear citations.
 
 Current date/time: {get_current_datetime()}
@@ -64,3 +65,10 @@ Example:
 - What skills are most important for success?
 [/FOLLOWUPS]
 """
+
+from typing import Any
+
+def __getattr__(name: str) -> Any:
+    if name == "SYSTEM_PROMPT":
+        return get_system_prompt()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

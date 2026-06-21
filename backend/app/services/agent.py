@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from app.core.prompts import SYSTEM_PROMPT
+from app.core.prompts import get_system_prompt
 from langchain.chat_models import init_chat_model
 from langchain.agents import create_agent
 from langchain.messages import HumanMessage, SystemMessage
@@ -26,7 +26,7 @@ def run_agent(user_message: str, model_name: Optional[str] = None) -> str:
 	result: Any = agent.invoke(
 		{
 			"messages": [
-				SystemMessage(content=SYSTEM_PROMPT),
+				SystemMessage(content=get_system_prompt()),
 				HumanMessage(content=user_message),
 			]
 		}
