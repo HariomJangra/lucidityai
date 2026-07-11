@@ -2288,7 +2288,7 @@ This response is a premium structural placeholder representing a live retrieval 
       {/* GLOBAL ABOUT BUTTON */}
       <a
         className="share-pill-btn global-about-btn"
-        href="https://hariomjangra.dev/projects/lucidity"
+        href="https://hariomjangra.dev/projects/lucidityai"
         target="_blank"
         rel="noopener noreferrer"
         style={{ textDecoration: 'none' }}
