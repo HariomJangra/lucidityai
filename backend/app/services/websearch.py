@@ -7,7 +7,7 @@ import numpy as np
 import requests
 import trafilatura
 
-from app.core.config import get_settings, SEARXNG_URL
+from app.core.config import get_settings
 from app.services.reranker import CrossRank
 from app.core.debug import DEBUG_MODE
 
@@ -118,7 +118,7 @@ def scrape_url(url: str):
 def search_web(query: str):
 
     response = requests.get(
-        f"{SEARXNG_URL.rstrip('/')}/search",
+        f"{settings.searxng_url.rstrip('/')}/search",
         params={
             "q": query,
             "format": "json",

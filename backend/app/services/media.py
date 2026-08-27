@@ -1,6 +1,8 @@
 import requests
 from concurrent.futures import ThreadPoolExecutor
-from app.core.config import SEARXNG_URL
+from app.core.config import get_settings
+
+settings = get_settings()
 
 def search_media(query: str):
     """
@@ -9,7 +11,7 @@ def search_media(query: str):
     def fetch_category(category: str):
         try:
             response = requests.get(
-                f"{SEARXNG_URL.rstrip('/')}/search",
+                f"{settings.searxng_url.rstrip('/')}/search",
                 params={
                     "q": query,
                     "format": "json",
@@ -41,9 +43,9 @@ def search_media(query: str):
         img_src = item.get("img_src")
 
         if thumbnail and thumbnail.startswith("/"):
-            thumbnail = SEARXNG_URL.rstrip('/') + thumbnail
+            thumbnail = settings.searxng_url.rstrip('/') + thumbnail
         if img_src and img_src.startswith("/"):
-            img_src = SEARXNG_URL.rstrip('/') + img_src
+            img_src = settings.searxng_url.rstrip('/') + img_src
 
         url = thumbnail or img_src
         if url:

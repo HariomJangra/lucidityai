@@ -1,4 +1,3 @@
-import os
 from functools import lru_cache
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,6 +9,7 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr
     huggingface_api_key: SecretStr
     compiler_api_key: SecretStr
+    searxng_url: str = "http://searxng:8080"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -21,7 +21,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
-
-SEARXNG_URL = os.getenv("SEARXNG_URL")
 
