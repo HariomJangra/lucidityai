@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/stream", "destination": "http://13.233.71.86:8000/stream" },
+    { "source": "/stream", "destination": "https://lucidityai-363528426593.asia-south1.run.app/stream" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
