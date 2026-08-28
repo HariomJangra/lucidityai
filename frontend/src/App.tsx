@@ -2285,17 +2285,6 @@ This response is a premium structural placeholder representing a live retrieval 
 
   return (
     <div className="app">
-      {/* GLOBAL ABOUT BUTTON */}
-      <a
-        className="share-pill-btn global-about-btn"
-        href="https://hariomjangra.dev/projects/lucidityai"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ textDecoration: 'none' }}
-      >
-        <Info size={14} className="share-icon" />
-        <span>About</span>
-      </a>
       {/* LEFT NAVIGATION SIDEBAR */}
       {false && (
         <aside className="sidebar">
@@ -2388,7 +2377,19 @@ This response is a premium structural placeholder representing a live retrieval 
          VIEW: 1. HOME SCREEN (LANDING PAGE)
          ========================================== */}
       {view === 'home' && (
-        <main className="main-content">
+        <main className="main-content home-page-main">
+          {/* HOME TOP RIGHT ABOUT BUTTON */}
+          <a
+            className="home-about-btn"
+            href="https://hariomjangra.dev/projects/lucidityai"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="About Lucidity AI"
+            aria-label="About Lucidity AI"
+          >
+            <Info size={14} className="share-icon" />
+            <span>About</span>
+          </a>
           {/* TOP TOPICS NAVIGATION */}
           {/*
           <header className="main-header">
@@ -2668,6 +2669,8 @@ This response is a premium structural placeholder representing a live retrieval 
                     className={`result-header-tab ${activeResultTab === tabItem.name ? 'active' : ''}`}
                     disabled={!isWebSearchUsed && tabItem.name !== 'Answer'}
                     onClick={() => setActiveResultTab(tabItem.name as any)}
+                    title={tabItem.name}
+                    aria-label={tabItem.name}
                   >
                     {tabItem.name === 'Answer' ? (
                       <span className="tab-icon answer-tab-brand-icon">
@@ -2676,7 +2679,7 @@ This response is a premium structural placeholder representing a live retrieval 
                     ) : (
                       <tabItem.icon size={14} className="tab-icon" />
                     )}
-                    <span>{tabItem.name}</span>
+                    <span className="tab-label">{tabItem.name}</span>
                   </button>
                 ))}
               </div>
@@ -2689,8 +2692,19 @@ This response is a premium structural placeholder representing a live retrieval 
                   aria-label="Start new thread"
                 >
                   <Plus size={15} />
-                  <span>New Thread</span>
+                  <span className="header-btn-label">New Thread</span>
                 </button>
+                <a
+                  className="new-thread-header-btn about-header-btn"
+                  href="https://hariomjangra.dev/projects/lucidityai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="About Lucidity AI"
+                  aria-label="About Lucidity AI"
+                >
+                  <Info size={14} />
+                  <span className="header-btn-label">About</span>
+                </a>
               </div>
             </header>
 
