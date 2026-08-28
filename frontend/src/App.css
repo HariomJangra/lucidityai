@@ -1429,12 +1429,8 @@
 
 .results-header-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 0;
-  /* Align tabs precisely to the bottom border */
-  margin-bottom: 0px;
   width: 100%;
 
   /* Make header sticky */
@@ -1442,8 +1438,67 @@
   top: 0;
   background-color: var(--page-bg);
   z-index: 95;
-  padding-top: 16px;
+  padding-top: 10px;
   margin-top: -16px;
+}
+
+.results-top-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  width: 100%;
+}
+
+.top-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-nav-brand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.top-nav-brand-btn:hover {
+  background-color: var(--surface-hover);
+}
+
+.top-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-about-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border-strong);
+  background-color: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.header-about-btn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--text-subtle);
+  color: var(--text-primary);
 }
 
 .header-left-tabs {
@@ -2592,22 +2647,25 @@
   }
 
   .results-header-actions {
-    padding-top: 12px;
+    padding-top: 10px;
     margin-top: -12px;
-    padding-right: 92px; /* Prevent fixed About button from overlapping header buttons */
+    padding-right: 0;
+  }
+
+  .results-top-nav-bar {
+    padding-bottom: 8px;
   }
 
   .header-left-tabs {
-    gap: 12px;
+    gap: 14px;
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x;
-    flex: 1;
-    min-width: 0;
-    padding-right: 8px;
+    width: 100%;
+    padding-right: 0;
   }
 
   .header-left-tabs::-webkit-scrollbar {
@@ -2616,19 +2674,20 @@
 
   .result-header-tab {
     flex-shrink: 0;
-    padding: 0 4px;
+    padding: 0 2px;
     font-size: 13px;
   }
 
-  .new-thread-header-btn {
-    height: 32px;
+  .new-thread-header-btn,
+  .header-about-btn {
+    height: 30px;
     padding: 0 10px;
     font-size: 12px;
     white-space: nowrap;
   }
 
   .results-page-main {
-    padding: 16px 16px 140px;
+    padding: 12px 14px 140px;
   }
 
   .referenced-links-grid,
@@ -2639,7 +2698,7 @@
 
 @media (max-width: 580px) {
   .results-page-main {
-    padding: 12px 12px 140px;
+    padding: 10px 10px 140px;
   }
 
   .referenced-links-grid,
@@ -2648,36 +2707,33 @@
   }
 
   .header-left-tabs {
-    gap: 8px;
+    gap: 10px;
   }
 
   .result-header-tab {
-    padding: 0 6px;
+    padding: 0 4px;
     font-size: 12.5px;
   }
 
-  .new-thread-header-btn span {
-    display: none; /* Icon-only (+) on narrow screens to prevent any overlap */
+  .new-thread-header-btn {
+    padding: 0 8px;
   }
 
-  .new-thread-header-btn {
-    width: 32px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 50%;
+  .header-about-btn {
+    padding: 0 8px;
   }
 
   .share-pill-btn {
-    padding: 0 10px;
-    font-size: 12px;
+    padding: 0 8px;
+    font-size: 11.5px;
   }
 
   .floating-bottom-prompt-bar-container {
-    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px;
   }
 
   .follow-up-search-form {
-    padding: 12px 14px 10px;
+    padding: 10px 12px 8px;
     border-radius: 16px;
   }
 }

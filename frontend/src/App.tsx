@@ -2285,17 +2285,19 @@ This response is a premium structural placeholder representing a live retrieval 
 
   return (
     <div className="app">
-      {/* GLOBAL ABOUT BUTTON */}
-      <a
-        className="share-pill-btn global-about-btn"
-        href="https://hariomjangra.dev/projects/lucidityai"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ textDecoration: 'none' }}
-      >
-        <Info size={14} className="share-icon" />
-        <span>About</span>
-      </a>
+      {/* GLOBAL ABOUT BUTTON (Only on Home View) */}
+      {view === 'home' && (
+        <a
+          className="share-pill-btn global-about-btn"
+          href="https://hariomjangra.dev/projects/lucidityai"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none' }}
+        >
+          <Info size={14} className="share-icon" />
+          <span>About</span>
+        </a>
+      )}
       {/* LEFT NAVIGATION SIDEBAR */}
       {false && (
         <aside className="sidebar">
@@ -2654,14 +2656,52 @@ This response is a premium structural placeholder representing a live retrieval 
         <main className="main-content results-page-main">
           <div className="results-wrapper-column">
 
-            {/* SEARCH RESULTS HEADER: TABS & ACTION BUTTONS */}
+            {/* SEARCH RESULTS HEADER: 2-ROW PERPLEXITY LAYOUT */}
             <header className="results-header-actions">
+              {/* ROW 1: TOP NAV BAR (Brand + New Thread + About) */}
+              <div className="results-top-nav-bar">
+                <div className="top-nav-left">
+                  <button
+                    className="top-nav-brand-btn"
+                    onClick={resetToHome}
+                    title="Home"
+                    aria-label="Go to home"
+                  >
+                    <PerplexityLogo />
+                  </button>
+
+                  <button
+                    className="new-thread-header-btn"
+                    onClick={resetToHome}
+                    title="New Thread"
+                    aria-label="Start new thread"
+                  >
+                    <Plus size={15} />
+                    <span>New Thread</span>
+                  </button>
+                </div>
+
+                <div className="top-nav-right">
+                  <a
+                    className="share-pill-btn header-about-btn"
+                    href="https://hariomjangra.dev/projects/lucidityai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <Info size={14} className="share-icon" />
+                    <span>About</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* ROW 2: CATEGORY TABS BAR */}
               <div className="header-left-tabs">
                 {[
                   { name: 'Answer', icon: PenTool },
+                  { name: 'Links', icon: Globe },
                   { name: 'Images', icon: ImageIcon },
-                  { name: 'Videos', icon: Video },
-                  { name: 'Links', icon: Globe }
+                  { name: 'Videos', icon: Video }
                 ].map((tabItem) => (
                   <button
                     key={tabItem.name}
@@ -2679,18 +2719,6 @@ This response is a premium structural placeholder representing a live retrieval 
                     <span>{tabItem.name}</span>
                   </button>
                 ))}
-              </div>
-
-              <div className="header-right-actions">
-                <button
-                  className="new-thread-header-btn"
-                  onClick={resetToHome}
-                  title="New Thread"
-                  aria-label="Start new thread"
-                >
-                  <Plus size={15} />
-                  <span>New Thread</span>
-                </button>
               </div>
             </header>
 
