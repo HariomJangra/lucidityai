@@ -2580,8 +2580,51 @@
    RESPONSIVE RESULTS STYLINGS
    ========================================================================== */
 @media (max-width: 768px) {
+  .global-about-btn {
+    top: 12px !important;
+    right: 12px !important;
+    height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+  }
+
+  .results-header-actions {
+    padding-top: 12px;
+    margin-top: -12px;
+    padding-right: 92px; /* Prevent fixed About button from overlapping header buttons */
+  }
+
+  .header-left-tabs {
+    gap: 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+    min-width: 0;
+    padding-right: 8px;
+  }
+
+  .header-left-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .result-header-tab {
+    flex-shrink: 0;
+    padding: 0 4px;
+    font-size: 13px;
+  }
+
+  .new-thread-header-btn {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
   .results-page-main {
-    padding: 16px 20px 80px;
+    padding: 16px 16px 140px;
   }
 
   .referenced-links-grid,
@@ -2592,7 +2635,7 @@
 
 @media (max-width: 580px) {
   .results-page-main {
-    padding: 16px 16px 72px;
+    padding: 12px 12px 140px;
   }
 
   .referenced-links-grid,
@@ -2601,17 +2644,37 @@
   }
 
   .header-left-tabs {
-    gap: 4px;
+    gap: 8px;
   }
 
   .result-header-tab {
-    padding: 0 8px;
-    font-size: 12px;
+    padding: 0 6px;
+    font-size: 12.5px;
+  }
+
+  .new-thread-header-btn span {
+    display: none; /* Icon-only (+) on narrow screens to prevent any overlap */
+  }
+
+  .new-thread-header-btn {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
   }
 
   .share-pill-btn {
     padding: 0 10px;
     font-size: 12px;
+  }
+
+  .floating-bottom-prompt-bar-container {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px;
+  }
+
+  .follow-up-search-form {
+    padding: 12px 14px 10px;
+    border-radius: 16px;
   }
 }
 
